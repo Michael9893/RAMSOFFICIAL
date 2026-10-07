@@ -1,0 +1,51 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role-based access control (admin or user).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "password": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "status": { "type": "string", "enum": ["active", "suspended"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "email", "name", "role", "createdAt"]
+    },
+    "SopFile": {
+      "title": "SopFile",
+      "description": "Uploaded file attachment or Google Drive link for a specific SOP.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sopId": { "type": "string" },
+        "sopTitle": { "type": "string" },
+        "fileName": { "type": "string" },
+        "fileSize": { "type": "string" },
+        "fileType": { "type": "string" },
+        "fileData": { "type": "string" },
+        "isDriveLink": { "type": "boolean" },
+        "driveUrl": { "type": "string" },
+        "uploadedBy": { "type": "string" },
+        "uploadedAt": { "type": "string" },
+        "description": { "type": "string" },
+        "downloadCount": { "type": "number" }
+      },
+      "required": ["id", "sopId", "sopTitle", "fileName", "fileData", "uploadedBy", "uploadedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User accounts with admin or viewer role definitions."
+    },
+    "/sopFiles/{fileId}": {
+      "schema": "SopFile",
+      "description": "Uploaded SOP attachments downloadable by users and manageable by admins."
+    }
+  }
+}

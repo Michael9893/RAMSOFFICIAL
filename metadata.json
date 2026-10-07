@@ -1,0 +1,7 @@
+{
+  "name": "RAMS Portal - AD-RAMS",
+  "description": "Records and Archives Management Section Portal for Standard Operating Procedures and Issuances.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
