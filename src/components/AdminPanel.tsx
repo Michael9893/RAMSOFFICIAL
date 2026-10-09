@@ -3,15 +3,20 @@ import {
   AppUser,
   SopFile,
   UserRole,
+  UserStatus,
   createUser,
   updateUserRole,
   deleteUser,
+  approveUser,
+  disapproveUser,
+  updateUserStatus,
   uploadSopFile,
   deleteSopFile,
   ALL_UPLOADABLE_SECTIONS,
   SOP_CATEGORIES,
   TEMPLATE_CATEGORIES,
   RESOURCE_CATEGORIES,
+  ISSUANCE_CATEGORIES,
 } from '../lib/authStore.ts';
 import {
   Shield,
@@ -30,6 +35,11 @@ import {
   FolderOpen,
   Link as LinkIcon,
   Eye,
+  Clock,
+  UserCheck,
+  UserX,
+  XCircle,
+  Check,
 } from 'lucide-react';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal.tsx';
 
@@ -41,6 +51,7 @@ interface AdminPanelProps {
   onRefreshData: () => void;
   onPreviewDriveLink: (file: SopFile) => void;
   onClose: () => void;
+  theme?: 'light' | 'dark';
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
@@ -51,7 +62,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onRefreshData,
   onPreviewDriveLink,
   onClose,
+  theme = 'light',
 }) => {
+  const isDark = theme === 'dark';
   const [activeTab, setActiveTab] = useState<'upload' | 'users'>('upload');
   const [uploadMode, setUploadMode] = useState<'file' | 'drive'>('file');
 
@@ -86,6 +99,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   // Role edit message
   const [roleMessage, setRoleMessage] = useState('');
+
+  // Pending registration verification & approval states
+  const [pendingRoleAssignments, setPendingRoleAssignments] = useState<Record<string, UserRole>>({});
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [approvalMessage, setApprovalMessage] = useState('');
 
   // Access check: only Admin can access AdminPanel
   if (currentUser.role !== 'admin') {
@@ -301,13 +319,66 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
+  // Handle Approve Registration
+  const handleApproveRegistration = async (userId: string) => {
+    const userToApprove = users.find((u) => u.id === userId);
+    if (!userToApprove) return;
+
+    const assignedRole = pendingRoleAssignments[userId] || userToApprove.requestedRole || 'user';
+    setActionLoadingId(userId);
+    try {
+      await approveUser(userId, assignedRole, currentUser.email);
+      onRefreshData();
+      setApprovalMessage(`Account for ${userToApprove.name} (${userToApprove.email}) was verified & approved as ${assignedRole.toUpperCase()}!`);
+      setTimeout(() => setApprovalMessage(''), 4500);
+    } catch (e) {
+      setApprovalMessage('Failed to approve account: ' + (e as Error).message);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Handle Disapprove Registration
+  const handleDisapproveRegistration = async (userId: string) => {
+    const userToDisapprove = users.find((u) => u.id === userId);
+    if (!userToDisapprove) return;
+
+    setActionLoadingId(userId);
+    try {
+      await disapproveUser(userId, currentUser.email);
+      onRefreshData();
+      setApprovalMessage(`Registration for ${userToDisapprove.name} (${userToDisapprove.email}) was disapproved.`);
+      setTimeout(() => setApprovalMessage(''), 4500);
+    } catch (e) {
+      setApprovalMessage('Failed to disapprove account: ' + (e as Error).message);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Handle Toggle Account Status
+  const handleToggleUserStatus = async (userId: string, newStatus: UserStatus) => {
+    try {
+      await updateUserStatus(userId, newStatus);
+      onRefreshData();
+      setRoleMessage(`Account status updated to ${newStatus.toUpperCase()}.`);
+      setTimeout(() => setRoleMessage(''), 3500);
+    } catch (e) {
+      setRoleMessage('Failed to update status.');
+    }
+  };
+
   // Filter files for currently selected section
   const filteredFiles = sopFiles.filter((f) => f.sopId === selectedSectionId);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-50 text-slate-900 overflow-y-auto animate-in fade-in duration-200">
+    <div className={`fixed inset-0 z-50 flex flex-col overflow-y-auto animate-in fade-in duration-200 ${
+      isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+    }`}>
       {/* Top Admin Header */}
-      <header className="w-full bg-[#0d2159] border-b border-[#1b3478] px-6 sm:px-10 py-3.5 flex items-center justify-between shrink-0 shadow-sm text-white">
+      <header className={`w-full border-b px-6 sm:px-10 py-3.5 flex items-center justify-between shrink-0 shadow-sm text-white ${
+        isDark ? 'bg-[#09163b] border-[#152a63]' : 'bg-[#0d2159] border-[#1b3478]'
+      }`}>
         <div className="flex items-center gap-3">
           <button
             onClick={onClose}
@@ -347,18 +418,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       </header>
 
       {/* Admin Tabs */}
-      <div className="bg-white border-b border-slate-200 px-6 sm:px-10 flex gap-6 text-xs font-semibold">
+      <div className={`border-b px-6 sm:px-10 flex gap-6 text-xs font-semibold ${
+        isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+      }`}>
         <button
           onClick={() => setActiveTab('upload')}
           className={`py-3.5 border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
             activeTab === 'upload'
               ? 'border-[#0284c7] text-[#0284c7] font-bold'
+              : isDark
+              ? 'border-transparent text-slate-400 hover:text-slate-200'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
           <FileUp className="w-4 h-4" />
-          <span>SOP & Templates File/Drive Management</span>
-          <span className="px-2 py-0.5 bg-slate-100 rounded-full text-[10px] text-slate-600 font-bold">
+          <span>SOP, Issuances & Templates Management</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'
+          }`}>
             {sopFiles.length} items
           </span>
         </button>
@@ -368,19 +445,31 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           className={`py-3.5 border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
             activeTab === 'users'
               ? 'border-[#0284c7] text-[#0284c7] font-bold'
+              : isDark
+              ? 'border-transparent text-slate-400 hover:text-slate-200'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <Users className="w-4 h-4" />
-          <span>Account Creation & Role Editor</span>
-          <span className="px-2 py-0.5 bg-slate-100 rounded-full text-[10px] text-slate-600 font-bold">
-            {users.length} accounts
-          </span>
+          <UserCheck className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+          <span>User Accounts & Registration Verification</span>
+          {users.filter((u) => u.status === 'pending').length > 0 ? (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 animate-pulse">
+              {users.filter((u) => u.status === 'pending').length} Pending Review
+            </span>
+          ) : (
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'
+            }`}>
+              {users.length} accounts
+            </span>
+          )}
         </button>
       </div>
 
       {/* Main Admin Area */}
-      <main className="flex-1 p-6 sm:p-10 max-w-7xl w-full mx-auto space-y-8 bg-slate-50">
+      <main className={`flex-1 p-6 sm:p-10 max-w-7xl w-full mx-auto space-y-8 ${
+        isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+      }`}>
         
         {/* TAB 1: SOP & TEMPLATES FILE/DRIVE UPLOADS */}
         {activeTab === 'upload' && (
@@ -448,6 +537,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       {SOP_CATEGORIES.map((sop) => (
                         <option key={sop.id} value={sop.id}>
                           SOP: {sop.title}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Administrative Issuances">
+                      {ISSUANCE_CATEGORIES.map((iss) => (
+                        <option key={iss.id} value={iss.id}>
+                          Issuance: {iss.title}
                         </option>
                       ))}
                     </optgroup>
@@ -704,20 +800,185 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {activeTab === 'users' && (
           <div className="space-y-8">
             <div>
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Users className="w-5 h-5 text-sky-600" />
-                User Accounts & Role Permissions
-              </h2>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-sky-600" />
+                  <span>RAMS: THE VAULT — User Accounts & Registration Approvals</span>
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-800">
+                    {users.length} Total Accounts
+                  </span>
+                  {users.filter((u) => u.status === 'pending').length > 0 && (
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+                      {users.filter((u) => u.status === 'pending').length} Awaiting Verification
+                    </span>
+                  )}
+                </div>
+              </div>
               <p className="text-xs text-slate-600 mt-1">
-                Create new accounts with specific initial passwords. Designate access levels as Admin (full access) or User (view & download only). Regular users cannot promote themselves to admin.
+                Review new account registrations submitted through the RAMS: THE VAULT login panel. Administrators can accept or disapprove registrations, verify staff credentials, and designate roles as <strong className="text-sky-700">User</strong> (View & Download) or <strong className="text-amber-700">Administrator</strong> (Full Upload & Role Management).
               </p>
             </div>
 
-            {/* Create Account Interface */}
+            {/* Approval Notification Feedback */}
+            {approvalMessage && (
+              <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-900 font-semibold flex items-center gap-2.5 shadow-xs animate-in fade-in duration-200">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span>{approvalMessage}</span>
+              </div>
+            )}
+
+            {/* 1. PENDING REGISTRATION QUEUE (Top Priority) */}
+            <div className="bg-white border-2 border-amber-200 rounded-xl overflow-hidden shadow-sm">
+              <div className="bg-amber-50/80 px-6 py-4 border-b border-amber-200 flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-amber-100 rounded-lg text-amber-700">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                      Pending Registration & Verification Queue
+                    </h3>
+                    <p className="text-[11px] text-amber-700">
+                      New registrations submitted via the log in panel that require administrator approval before access is granted.
+                    </p>
+                  </div>
+                </div>
+
+                <span className="px-2.5 py-1 rounded-full text-xs font-black bg-amber-200 text-amber-900">
+                  {users.filter((u) => u.status === 'pending').length} Pending
+                </span>
+              </div>
+
+              {users.filter((u) => u.status === 'pending').length === 0 ? (
+                <div className="p-8 text-center text-slate-500 space-y-1">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-1" />
+                  <p className="text-xs font-bold text-slate-700">
+                    No Pending Registrations
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    All submitted registration requests have been reviewed and verified. When staff register through the log in panel, they will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-700 min-w-[720px]">
+                    <thead className="bg-amber-50/50 text-slate-600 uppercase text-[10px] tracking-wider border-b border-amber-200/60 font-bold">
+                      <tr>
+                        <th className="px-5 py-3">Registrant Name & Department</th>
+                        <th className="px-4 py-3">Official Email</th>
+                        <th className="px-4 py-3">Requested Access</th>
+                        <th className="px-4 py-3">Assign Verified Role</th>
+                        <th className="px-5 py-3 text-right">Approval Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-100/60">
+                      {users
+                        .filter((u) => u.status === 'pending')
+                        .map((pUser) => {
+                          const currentSelectedRole =
+                            pendingRoleAssignments[pUser.id] || pUser.requestedRole || 'user';
+                          const isLoading = actionLoadingId === pUser.id;
+
+                          return (
+                            <tr key={pUser.id} className="hover:bg-amber-50/30 transition-colors">
+                              {/* Name & Dept */}
+                              <td className="px-5 py-3.5">
+                                <div className="flex items-center gap-2.5">
+                                  <span className="w-8 h-8 rounded-full bg-amber-100 border border-amber-300 flex items-center justify-center font-bold text-amber-800 text-xs shrink-0 shadow-2xs">
+                                    {pUser.name.charAt(0).toUpperCase()}
+                                  </span>
+                                  <div>
+                                    <div className="font-bold text-slate-900">{pUser.name}</div>
+                                    <div className="text-[10px] text-slate-500">
+                                      {pUser.department || 'DSWD Field Office 1'}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Email */}
+                              <td className="px-4 py-3.5 font-mono text-slate-700 text-[11px]">
+                                {pUser.email}
+                              </td>
+
+                              {/* Requested Access */}
+                              <td className="px-4 py-3.5">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                  pUser.requestedRole === 'admin'
+                                    ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                    : 'bg-sky-100 text-sky-900 border border-sky-300'
+                                }`}>
+                                  {pUser.requestedRole === 'admin' ? 'Requested: Admin' : 'Requested: User'}
+                                </span>
+                              </td>
+
+                              {/* Verify & Select Role */}
+                              <td className="px-4 py-3.5">
+                                <select
+                                  value={currentSelectedRole}
+                                  onChange={(e) => {
+                                    setPendingRoleAssignments((prev) => ({
+                                      ...prev,
+                                      [pUser.id]: e.target.value as UserRole,
+                                    }));
+                                  }}
+                                  className="px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:border-sky-500 cursor-pointer shadow-2xs"
+                                >
+                                  <option value="user">User (View & Download Only)</option>
+                                  <option value="admin">Administrator (Full Access & Uploads)</option>
+                                </select>
+                              </td>
+
+                              {/* Actions: Accept or Disapprove */}
+                              <td className="px-5 py-3.5 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  {/* Accept / Approve */}
+                                  <button
+                                    type="button"
+                                    disabled={isLoading}
+                                    onClick={() => handleApproveRegistration(pUser.id)}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                                    title={`Approve account and activate as ${currentSelectedRole.toUpperCase()}`}
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>
+                                      {isLoading
+                                        ? 'Verifying...'
+                                        : currentSelectedRole === 'admin'
+                                        ? 'Approve as Admin'
+                                        : 'Approve as User'}
+                                    </span>
+                                  </button>
+
+                                  {/* Disapprove */}
+                                  <button
+                                    type="button"
+                                    disabled={isLoading}
+                                    onClick={() => handleDisapproveRegistration(pUser.id)}
+                                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                                    title="Disapprove account registration"
+                                  >
+                                    <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                                    <span>Disapprove</span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* 2. CREATE ACCOUNT INTERFACE (Manual Direct Creation) */}
             <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-sky-600" />
-                Create New User Account Interface
+                Manually Pre-Approve & Create Account
               </h3>
 
               <form onSubmit={handleCreateUserSubmit} className="space-y-4">
@@ -731,7 +992,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       type="text"
                       value={newUserName}
                       onChange={(e) => setNewUserName(e.target.value)}
-                      placeholder="e.g. Juan dela Cruz"
+                      placeholder="Full name"
                       className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500"
                     />
                   </div>
@@ -745,7 +1006,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       type="email"
                       value={newUserEmail}
                       onChange={(e) => setNewUserEmail(e.target.value)}
-                      placeholder="e.g. jdelacruz@dswd.gov.ph"
+                      placeholder="Official email address"
                       className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500"
                     />
                   </div>
@@ -807,15 +1068,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </form>
             </div>
 
-            {/* User List & Role Editor */}
+            {/* 3. USER DIRECTORY & ROLE EDITOR */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">
-                    Existing User Directory ({users.length} accounts)
+                    RAMS: THE VAULT User Directory ({users.length} accounts)
                   </h3>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Admins can edit whether each account is an <strong className="text-sky-700">Admin</strong> or a <strong className="text-slate-800">User</strong>.
+                    Admins can switch access between <strong className="text-sky-700">Admin</strong> and <strong className="text-slate-800">User</strong>, activate or suspend accounts, or delete accounts permanently.
                   </p>
                 </div>
                 {roleMessage && (
@@ -829,8 +1090,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <table className="w-full text-left text-xs text-slate-700">
                   <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] tracking-wider border-b border-slate-200 font-bold">
                     <tr>
-                      <th className="px-4 py-3">User</th>
+                      <th className="px-4 py-3">User & Department</th>
                       <th className="px-4 py-3">Email Address</th>
+                      <th className="px-4 py-3">Account Status</th>
                       <th className="px-4 py-3">Access Level / Role</th>
                       <th className="px-4 py-3">Password</th>
                       <th className="px-4 py-3 text-right">Delete Account</th>
@@ -844,14 +1106,67 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             <span className="w-7 h-7 rounded-full bg-sky-50 border border-sky-200 flex items-center justify-center font-bold text-sky-700 text-xs shadow-2xs">
                               {user.name.charAt(0).toUpperCase()}
                             </span>
-                            <span>{user.name}</span>
-                            {user.id === currentUser.id && (
-                              <span className="text-[10px] text-amber-700 font-bold">(You)</span>
-                            )}
+                            <div>
+                              <span>{user.name}</span>
+                              {user.id === currentUser.id && (
+                                <span className="ml-1 text-[10px] text-amber-700 font-bold">(You)</span>
+                              )}
+                              {user.department && (
+                                <div className="text-[10px] text-slate-400 font-normal">{user.department}</div>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-3 font-mono text-slate-600 text-[11px]">
                           {user.email}
+                        </td>
+                        <td className="px-4 py-3">
+                          {/* Status Badge & Toggle */}
+                          <div className="flex items-center gap-1.5">
+                            {user.status === 'active' && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                Active
+                              </span>
+                            )}
+                            {user.status === 'pending' && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                Pending Approval
+                              </span>
+                            )}
+                            {user.status === 'disapproved' && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                                Disapproved
+                              </span>
+                            )}
+                            {user.status === 'suspended' && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
+                                Suspended
+                              </span>
+                            )}
+
+                            {/* Quick status toggle for non-superadmin */}
+                            {user.email.toLowerCase() !== 'admin@dswd.gov.ph' && (
+                              user.status === 'active' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleUserStatus(user.id, 'suspended')}
+                                  className="text-[10px] text-slate-400 hover:text-amber-700 underline cursor-pointer ml-1"
+                                  title="Suspend account"
+                                >
+                                  Suspend
+                                </button>
+                              ) : user.status === 'suspended' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleUserStatus(user.id, 'active')}
+                                  className="text-[10px] text-emerald-600 hover:text-emerald-800 underline cursor-pointer ml-1"
+                                  title="Reactivate account"
+                                >
+                                  Activate
+                                </button>
+                              ) : null
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           {/* Role Switcher Selector */}
@@ -870,7 +1185,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                                     : 'bg-white border-slate-300 text-slate-800 focus:ring-slate-400'
                                 }`}
                               >
-                                <option value="admin">Admin (Full Access)</option>
+                                <option value="admin">Admin (Full Access & Uploads)</option>
                                 <option value="user">User (View & Download Only)</option>
                               </select>
                             )}

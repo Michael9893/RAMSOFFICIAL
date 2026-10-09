@@ -23,6 +23,7 @@ interface ResourcesViewProps {
   onPreviewDriveLink: (file: SopFile) => void;
   onRefreshData: () => void;
   onOpenLogin: () => void;
+  theme?: 'light' | 'dark';
 }
 
 export const ResourcesView: React.FC<ResourcesViewProps> = ({
@@ -31,7 +32,9 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({
   onPreviewDriveLink,
   onRefreshData,
   onOpenLogin,
+  theme = 'light',
 }) => {
+  const isDark = theme === 'dark';
   // Filter for Records Disposition Schedule files
   const rdsFiles = files.filter((f) => f.sopId === 'resource-rds');
 
@@ -188,13 +191,15 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({
   };
 
   return (
-    <div className="w-full space-y-8 animate-in fade-in duration-200 bg-white">
+    <div className={`w-full space-y-8 animate-in fade-in duration-200 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
       {/* 1. DISCLAIMER NOTICE Section (Exact match to screenshot) */}
-      <section className="space-y-2 border-b border-slate-200 pb-7 bg-red-50/40 p-5 rounded-xl border border-red-100">
+      <section className={`space-y-2 border pb-7 p-5 rounded-xl ${
+        isDark ? 'bg-red-950/20 border-red-900/40 text-slate-200' : 'bg-red-50/40 border-red-100 text-slate-800'
+      }`}>
         <h2 className="text-[#dc2626] font-bold text-sm sm:text-[15px] tracking-wide uppercase flex items-center gap-2">
           <span>DISCLAIMER NOTICE:</span>
         </h2>
-        <p className="text-slate-700 text-xs sm:text-[13.5px] leading-relaxed italic font-normal max-w-7xl">
+        <p className={`text-xs sm:text-[13.5px] leading-relaxed italic font-normal max-w-7xl ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
           This correspondence and any file transmitted with it are CONFIDENTIAL and intended solely for the use of individuals or entities to whom this is addressed. Access by anyone else is strictly unauthorized. If you are not the intended recipient, any disclosure, copying, distribution or any other action taken or omitted to be taken in reliance on it is prohibited and unlawful. It shall justify the AD-RAMS to exercise whatever rights and remedies under the applicable laws, rules and regulations. In such case, please notify the AD-RAMS and subsequently return this correspondence.
         </p>
       </section>
@@ -205,9 +210,9 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({
         {/* Left Column (Table of Files / Resources) - 7 cols */}
         <div className="lg:col-span-7 space-y-4">
           {/* Header Action Bar */}
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+          <div className={`flex items-center justify-between pb-2 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+              <span className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                 Official RDS Documents & Drive Links ({rdsFiles.length})
               </span>
             </div>
@@ -233,17 +238,22 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({
             )}
           </div>
 
-          {/* Table Container */}
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider">
-                <tr>
-                  <th className="px-4 py-3 font-bold text-[#dc2626]">TITLE</th>
-                  <th className="px-4 py-3 font-semibold text-slate-600">LAST MODIFIED</th>
-                  <th className="px-4 py-3 text-right font-semibold text-slate-600">ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+          {/* Table Container with horizontal scrolling on mobile */}
+          <div className={`border rounded-xl overflow-hidden shadow-sm ${
+            isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+          }`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[500px]">
+                <thead className={`border-b text-[11px] uppercase tracking-wider ${
+                  isDark ? 'bg-slate-800/80 border-slate-700' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <tr>
+                    <th className="px-4 py-3 font-bold text-[#dc2626]">TITLE</th>
+                    <th className="px-4 py-3 font-semibold text-slate-500 dark:text-slate-400">LAST MODIFIED</th>
+                    <th className="px-4 py-3 text-right font-semibold text-slate-500 dark:text-slate-400">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDark ? 'divide-slate-800' : 'divide-slate-100'}`}>
                 {rdsFiles.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="px-4 py-8 text-center text-slate-500 text-xs">
@@ -363,6 +373,7 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
 

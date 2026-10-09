@@ -10,6 +10,7 @@ import {
 import { db } from './firebase.ts';
 
 export type UserRole = 'admin' | 'user';
+export type UserStatus = 'active' | 'pending' | 'suspended' | 'disapproved';
 
 export interface AppUser {
   id: string;
@@ -17,8 +18,12 @@ export interface AppUser {
   name: string;
   password?: string;
   role: UserRole;
-  status: 'active' | 'suspended';
+  status: UserStatus;
   createdAt: string;
+  department?: string;
+  requestedRole?: UserRole;
+  approvedAt?: string;
+  approvedBy?: string;
 }
 
 export interface SopFile {
@@ -41,6 +46,11 @@ export const RESOURCE_CATEGORIES = [
   { id: 'resource-rds', title: 'Records Disposition Schedule (RDS)', type: 'resource' as const },
 ];
 
+export const ISSUANCE_CATEGORIES = [
+  { id: 'issuance-2025', title: 'Administrative Issuances 2025', year: '2025', type: 'issuance' as const },
+  { id: 'issuance-2026', title: 'Administrative Issuances 2026', year: '2026', type: 'issuance' as const },
+];
+
 export const TEMPLATE_CATEGORIES = [
   { id: 'tpl-general', title: 'General Forms', type: 'template' as const },
   { id: 'tpl-admin-service', title: 'Admin Service Forms', type: 'template' as const },
@@ -61,6 +71,7 @@ export const SOP_CATEGORIES = [
 
 export const ALL_UPLOADABLE_SECTIONS = [
   ...RESOURCE_CATEGORIES,
+  ...ISSUANCE_CATEGORIES,
   ...SOP_CATEGORIES,
   ...TEMPLATE_CATEGORIES,
 ];
@@ -73,6 +84,7 @@ const DEFAULT_USERS: AppUser[] = [
     password: 'admin123',
     role: 'admin',
     status: 'active',
+    department: 'AD-RAMS Records Section',
     createdAt: '2025-01-15T08:00:00Z',
   },
   {
@@ -82,7 +94,19 @@ const DEFAULT_USERS: AppUser[] = [
     password: 'user123',
     role: 'user',
     status: 'active',
+    department: 'Operations Division',
     createdAt: '2025-02-10T09:30:00Z',
+  },
+  {
+    id: 'user-pending-1',
+    email: 'maria.santos@dswd.gov.ph',
+    name: 'Maria Santos',
+    password: 'user123',
+    role: 'user',
+    status: 'pending',
+    department: 'Community-Based Services Section',
+    requestedRole: 'user',
+    createdAt: '2026-03-01T08:30:00Z',
   },
 ];
 
@@ -331,14 +355,24 @@ export function sanitizeFileForFirestore(file: Partial<SopFile>): SopFile {
 export function sanitizeUserForFirestore(user: Partial<AppUser>): AppUser {
   const email = (user.email || '').trim().toLowerCase();
   const isAdmin = email === 'admin@dswd.gov.ph';
+  const rawStatus = user.status;
+  const validStatus: UserStatus =
+    rawStatus === 'pending' || rawStatus === 'suspended' || rawStatus === 'disapproved'
+      ? rawStatus
+      : 'active';
+
   return {
     id: user.id || `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     email: email || 'user@dswd.gov.ph',
     name: user.name || 'User',
     password: user.password || (isAdmin ? 'admin123' : 'user123'),
     role: isAdmin ? 'admin' : (user.role === 'admin' ? 'admin' : 'user'),
-    status: user.status === 'suspended' ? 'suspended' : 'active',
+    status: isAdmin ? 'active' : validStatus,
     createdAt: user.createdAt || new Date().toISOString(),
+    department: user.department || '',
+    requestedRole: user.requestedRole || (user.role === 'admin' ? 'admin' : 'user'),
+    approvedAt: user.approvedAt || undefined,
+    approvedBy: user.approvedBy || undefined,
   };
 }
 
@@ -396,12 +430,17 @@ export function getStoredSopFiles(): SopFile[] {
     const raw = localStorage.getItem(STORAGE_KEY_FILES);
     if (raw) {
       const parsed: SopFile[] = JSON.parse(raw);
-      const sanitized = parsed.map((f) => sanitizeFileForFirestore(f));
-      if (!sanitized.some((f) => f.sopId === 'resource-rds')) {
+      // Ensure administrative issuances files are removed per user request
+      const filtered = parsed.filter(
+        (f) => f.sopId !== 'issuance-2025' && f.sopId !== 'issuance-2026'
+      );
+      const sanitized = filtered.map((f) => sanitizeFileForFirestore(f));
+      let updated = [...sanitized];
+      if (!updated.some((f) => f.sopId === 'resource-rds')) {
         const rdsInitial = INITIAL_SOP_FILES.filter((f) => f.sopId === 'resource-rds').map(sanitizeFileForFirestore);
-        return [...sanitized, ...rdsInitial];
+        updated = [...updated, ...rdsInitial];
       }
-      return sanitized;
+      return updated;
     }
   } catch (e) {
     console.error(e);
@@ -411,7 +450,10 @@ export function getStoredSopFiles(): SopFile[] {
 
 export function saveStoredSopFiles(files: SopFile[]): void {
   try {
-    const sanitized = files.map((f) => sanitizeFileForFirestore(f));
+    // Filter out any administrative issuances to ensure they remain empty
+    const sanitized = files
+      .filter((f) => f.sopId !== 'issuance-2025' && f.sopId !== 'issuance-2026')
+      .map((f) => sanitizeFileForFirestore(f));
     localStorage.setItem(STORAGE_KEY_FILES, JSON.stringify(sanitized));
   } catch (e) {
     console.error(e);
@@ -512,7 +554,13 @@ export function subscribeToSopFiles(callback: (files: SopFile[]) => void): () =>
         initialized = true;
         const list: SopFile[] = [];
         snapshot.forEach((d) => {
-          list.push(sanitizeFileForFirestore(d.data() as Partial<SopFile>));
+          const item = sanitizeFileForFirestore(d.data() as Partial<SopFile>);
+          // Clean out any previously uploaded or seeded issuance documents from Firestore
+          if (item.sopId === 'issuance-2025' || item.sopId === 'issuance-2026') {
+            deleteDoc(doc(db, 'sopFiles', d.id)).catch(() => {});
+          } else {
+            list.push(item);
+          }
         });
 
         // Ensure RDS resource files exist in Firestore
@@ -562,6 +610,131 @@ export async function createUser(data: Omit<AppUser, 'id' | 'createdAt'>): Promi
   }
 
   return newUser;
+}
+
+export async function registerUser(data: {
+  name: string;
+  email: string;
+  password: string;
+  department?: string;
+  requestedRole?: UserRole;
+}): Promise<AppUser> {
+  const newUser = sanitizeUserForFirestore({
+    id: `user-reg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    name: data.name.trim(),
+    email: data.email.trim().toLowerCase(),
+    password: data.password.trim(),
+    department: (data.department || '').trim(),
+    requestedRole: data.requestedRole || 'user',
+    role: data.requestedRole || 'user',
+    status: 'pending', // Starts in pending verification
+    createdAt: new Date().toISOString(),
+  });
+
+  // Immediate local update
+  const current = getStoredUsers();
+  saveStoredUsers([...current.filter((u) => u.id !== newUser.id), newUser]);
+
+  // Cloud Firestore persistence
+  try {
+    const payload = cleanFirestorePayload(newUser);
+    await setDoc(doc(db, 'users', newUser.id), payload);
+  } catch (e) {
+    console.error('Firestore registerUser failed:', e);
+  }
+
+  return newUser;
+}
+
+export async function approveUser(
+  userId: string,
+  assignedRole: UserRole,
+  adminEmail: string = 'admin@dswd.gov.ph'
+): Promise<void> {
+  const current = getStoredUsers();
+  const target = current.find((u) => u.id === userId);
+  if (!target) return;
+
+  const now = new Date().toISOString();
+  const targetRole = target.email.toLowerCase() === 'admin@dswd.gov.ph' ? 'admin' : assignedRole;
+  const updatedUser: AppUser = {
+    ...target,
+    status: 'active',
+    role: targetRole,
+    approvedAt: now,
+    approvedBy: adminEmail,
+  };
+
+  const updated = current.map((u) => (u.id === userId ? updatedUser : u));
+  saveStoredUsers(updated);
+
+  const active = getCurrentUser();
+  if (active && active.id === userId) {
+    setCurrentUser(updatedUser);
+  }
+
+  try {
+    await updateDoc(doc(db, 'users', userId), {
+      status: 'active',
+      role: targetRole,
+      approvedAt: now,
+      approvedBy: adminEmail,
+    });
+  } catch (e) {
+    console.error('Firestore approveUser failed:', e);
+  }
+}
+
+export async function disapproveUser(
+  userId: string,
+  adminEmail: string = 'admin@dswd.gov.ph'
+): Promise<void> {
+  const current = getStoredUsers();
+  const target = current.find((u) => u.id === userId);
+  if (!target || target.email.toLowerCase() === 'admin@dswd.gov.ph') return;
+
+  const updatedUser: AppUser = {
+    ...target,
+    status: 'disapproved',
+    approvedBy: adminEmail,
+  };
+
+  const updated = current.map((u) => (u.id === userId ? updatedUser : u));
+  saveStoredUsers(updated);
+
+  try {
+    await updateDoc(doc(db, 'users', userId), {
+      status: 'disapproved',
+      approvedBy: adminEmail,
+    });
+  } catch (e) {
+    console.error('Firestore disapproveUser failed:', e);
+  }
+}
+
+export async function updateUserStatus(userId: string, newStatus: UserStatus): Promise<void> {
+  const current = getStoredUsers();
+  const target = current.find((u) => u.id === userId);
+  if (!target || target.email.toLowerCase() === 'admin@dswd.gov.ph') return;
+
+  const updatedUser: AppUser = {
+    ...target,
+    status: newStatus,
+  };
+
+  const updated = current.map((u) => (u.id === userId ? updatedUser : u));
+  saveStoredUsers(updated);
+
+  const active = getCurrentUser();
+  if (active && active.id === userId) {
+    setCurrentUser(updatedUser);
+  }
+
+  try {
+    await updateDoc(doc(db, 'users', userId), { status: newStatus });
+  } catch (e) {
+    console.error('Firestore updateUserStatus failed:', e);
+  }
 }
 
 export async function updateUserRole(userId: string, newRole: UserRole): Promise<void> {
