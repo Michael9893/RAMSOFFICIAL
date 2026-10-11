@@ -280,21 +280,11 @@ export default function App() {
                     const count =
                       item.id === 'messengerial'
                         ? messengerialRecords.length
-                        : item.id === 'issuances'
-                        ? sopFiles.filter(
-                            (f) =>
-                              f.sopId === 'issuance-2025' ||
-                              f.sopId === 'issuance-2026' ||
-                              f.sopId === 'issuances'
-                          ).length
                         : sopFiles.filter((f) => f.sopId === item.id).length;
 
                     const handleItemClick = () => {
                       if (item.id === 'messengerial') {
                         setActiveTab('messengerial');
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      } else if (item.id === 'issuances') {
-                        setActiveTab('issuances-2026');
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       } else {
                         setActiveViewerSop(item);

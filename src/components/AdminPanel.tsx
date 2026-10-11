@@ -17,7 +17,6 @@ import {
   TEMPLATE_CATEGORIES,
   RESOURCE_CATEGORIES,
   ISSUANCE_CATEGORIES,
-  isGoogleDocsUrl,
 } from '../lib/authStore.ts';
 import {
   Shield,
@@ -219,14 +218,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setUploadSuccess('');
 
       try {
-        const isDoc = isGoogleDocsUrl(driveUrl.trim());
         const newDriveFile: SopFile = {
           id: `drive-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
           sopId: selectedSectionId,
           sopTitle: targetTitle,
           fileName: driveTitle.trim(),
-          fileSize: isDoc ? 'Google Docs' : 'Google Drive',
-          fileType: isDoc ? 'google-docs' : 'google-drive',
+          fileSize: 'Google Drive',
+          fileType: 'google-drive',
           fileData: driveUrl.trim(),
           isDriveLink: true,
           driveUrl: driveUrl.trim(),
@@ -247,9 +245,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         setDriveTitle('');
         setDriveUrl('');
         setDriveDescription('');
-        setUploadSuccess(
-          `Successfully added ${isDoc ? 'Google Docs' : 'Google Drive'} link "${newDriveFile.fileName}" for ${targetTitle}!`
-        );
+        setUploadSuccess(`Successfully added Google Drive link "${newDriveFile.fileName}" for ${targetTitle}!`);
       } catch (err) {
         setUploadError('Failed to save link: ' + (err as Error).message);
       } finally {
@@ -481,10 +477,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <div>
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <Upload className="w-5 h-5 text-sky-600" />
-                Upload Documents & Google Docs / Drive Links
+                Upload Documents & Google Drive Links
               </h2>
               <p className="text-xs text-slate-600 mt-1">
-                Upload local files or add Google Docs and Google Drive links for Standard Operating Procedures (SOPs), Administrative Issuances, Records Disposition Schedule (RDS), or Template Categories.
+                Upload local files or add Google Drive links for Standard Operating Procedures (SOPs), Records Disposition Schedule (RDS), or Template Categories.
               </p>
             </div>
 
@@ -513,7 +509,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 }`}
               >
                 <LinkIcon className="w-3.5 h-3.5" />
-                <span>Add Google Docs / Drive Link</span>
+                <span>Add Google Drive Link</span>
               </button>
             </div>
 
@@ -746,15 +742,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           </td>
                           <td className="px-4 py-3 text-slate-600 text-[11px]">
                             {file.isDriveLink ? (
-                              isGoogleDocsUrl(file.driveUrl || file.fileData) ? (
-                                <span className="px-2 py-0.5 bg-blue-50 border border-blue-300 text-blue-800 rounded font-semibold text-[10px]">
-                                  Google Docs
-                                </span>
-                              ) : (
-                                <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded font-semibold text-[10px]">
-                                  Google Drive
-                                </span>
-                              )
+                              <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded font-semibold text-[10px]">
+                                Google Drive
+                              </span>
                             ) : (
                               <span className="font-mono">{file.fileSize}</span>
                             )}

@@ -444,7 +444,11 @@ export function getStoredSopFiles(): SopFile[] {
     const raw = localStorage.getItem(STORAGE_KEY_FILES);
     if (raw) {
       const parsed: SopFile[] = JSON.parse(raw);
-      const sanitized = parsed.map((f) => sanitizeFileForFirestore(f));
+      // Ensure administrative issuances files are removed per user request
+      const filtered = parsed.filter(
+        (f) => f.sopId !== 'issuance-2025' && f.sopId !== 'issuance-2026'
+      );
+      const sanitized = filtered.map((f) => sanitizeFileForFirestore(f));
       let updated = [...sanitized];
       if (!updated.some((f) => f.sopId === 'resource-rds')) {
         const rdsInitial = INITIAL_SOP_FILES.filter((f) => f.sopId === 'resource-rds').map(sanitizeFileForFirestore);
@@ -460,7 +464,10 @@ export function getStoredSopFiles(): SopFile[] {
 
 export function saveStoredSopFiles(files: SopFile[]): void {
   try {
-    const sanitized = files.map((f) => sanitizeFileForFirestore(f));
+    // Filter out any administrative issuances to ensure they remain empty
+    const sanitized = files
+      .filter((f) => f.sopId !== 'issuance-2025' && f.sopId !== 'issuance-2026')
+      .map((f) => sanitizeFileForFirestore(f));
     localStorage.setItem(STORAGE_KEY_FILES, JSON.stringify(sanitized));
   } catch (e) {
     console.error(e);
@@ -570,7 +577,12 @@ export function subscribeToSopFiles(callback: (files: SopFile[]) => void): () =>
         const list: SopFile[] = [];
         snapshot.forEach((d) => {
           const item = sanitizeFileForFirestore(d.data() as Partial<SopFile>);
-          list.push(item);
+          // Clean out any previously uploaded or seeded issuance documents from Firestore
+          if (item.sopId === 'issuance-2025' || item.sopId === 'issuance-2026') {
+            deleteDoc(doc(db, 'sopFiles', d.id)).catch(() => {});
+          } else {
+            list.push(item);
+          }
         });
 
         // Ensure RDS resource files exist in Firestore
@@ -806,17 +818,9 @@ export async function uploadSopFile(file: SopFile): Promise<void> {
 
   // Cloud Firestore persistence
   try {
-    let cloudPayload = payload;
-    const jsonStr = JSON.stringify(payload);
-    if (jsonStr.length > 850000) {
-      cloudPayload = {
-        ...payload,
-        fileData: '',
-      };
-    }
-    await setDoc(doc(db, 'sopFiles', clean.id), cloudPayload);
+    await setDoc(doc(db, 'sopFiles', clean.id), payload);
   } catch (e: unknown) {
-    console.warn('Firestore uploadSopFile notice:', e);
+    console.error('Firestore uploadSopFile error:', e);
   }
 }
 
@@ -833,44 +837,32 @@ export async function deleteSopFile(fileId: string): Promise<void> {
   }
 }
 
-// Detect if URL is a Google Docs link
-export function isGoogleDocsUrl(url: string | undefined): boolean {
-  if (!url) return false;
-  return url.includes('docs.google.com/document');
-}
-
-// Detect if URL is Google Sheets
-export function isGoogleSheetsUrl(url: string | undefined): boolean {
-  if (!url) return false;
-  return url.includes('docs.google.com/spreadsheets');
-}
-
-// Convert Google Drive / Google Docs link to preview embed URL
+// Convert Google Drive link to preview embed URL
 export function getGoogleDriveEmbedUrl(url: string): string | null {
   if (!url) return null;
-
-  // Google Docs: /document/d/{ID}/... or /document/u/{N}/d/{ID}/...
-  const docMatch = url.match(/\/document\/(?:u\/[0-9]+\/)?d\/([a-zA-Z0-9_-]+)/);
-  if (docMatch && docMatch[1]) {
-    return `https://docs.google.com/document/d/${docMatch[1]}/preview`;
-  }
-
-  // Google Sheets: /spreadsheets/d/{ID}/... or /spreadsheets/u/{N}/d/{ID}/...
-  const sheetMatch = url.match(/\/spreadsheets\/(?:u\/[0-9]+\/)?d\/([a-zA-Z0-9_-]+)/);
-  if (sheetMatch && sheetMatch[1]) {
-    return `https://docs.google.com/spreadsheets/d/${sheetMatch[1]}/preview`;
-  }
-
-  // Google Presentation: /presentation/d/{ID}/... or /presentation/u/{N}/d/{ID}/...
-  const presMatch = url.match(/\/presentation\/(?:u\/[0-9]+\/)?d\/([a-zA-Z0-9_-]+)/);
-  if (presMatch && presMatch[1]) {
-    return `https://docs.google.com/presentation/d/${presMatch[1]}/preview`;
-  }
 
   // File link: /file/d/{ID}/...
   const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (fileMatch && fileMatch[1]) {
     return `https://drive.google.com/file/d/${fileMatch[1]}/preview`;
+  }
+
+  // Google Docs: /document/d/{ID}/...
+  const docMatch = url.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
+  if (docMatch && docMatch[1]) {
+    return `https://docs.google.com/document/d/${docMatch[1]}/preview`;
+  }
+
+  // Google Sheets: /spreadsheets/d/{ID}/...
+  const sheetMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  if (sheetMatch && sheetMatch[1]) {
+    return `https://docs.google.com/spreadsheets/d/${sheetMatch[1]}/preview`;
+  }
+
+  // Google Presentation: /presentation/d/{ID}/...
+  const presMatch = url.match(/\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+  if (presMatch && presMatch[1]) {
+    return `https://docs.google.com/presentation/d/${presMatch[1]}/preview`;
   }
 
   // Google Drive folder: /folders/{ID}
