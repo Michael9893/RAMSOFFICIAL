@@ -42,6 +42,35 @@ export interface SopFile {
   downloadCount: number;
 }
 
+export type MessengerialCategory = 'CO.PSP' | 'PSP' | 'POSTAL';
+export type MessengerialStatus =
+  | 'Dispatched'
+  | 'In Transit'
+  | 'Out for Delivery'
+  | 'Delivered'
+  | 'Pending Carrier Pickup';
+
+export interface MessengerialRecord {
+  id: string;
+  category: MessengerialCategory; // CO.PSP, PSP, or POSTAL
+  trackingNumber: string;
+  courier: string; // e.g. LBC Express, J&T Express, PhilPost, 2GO
+  recipient: string; // Addressee / Recipient office or person
+  recipientOffice?: string;
+  sender: string; // Originating office / section
+  subject: string; // Document / package description
+  dispatchDate: string; // YYYY-MM-DD
+  status: MessengerialStatus;
+  trackingUrl?: string; // Direct carrier tracking URL
+  attachmentName?: string;
+  attachmentData?: string; // Base64 or download URL
+  driveUrl?: string;
+  isDriveLink?: boolean;
+  remarks?: string;
+  postedBy: string;
+  postedAt: string;
+}
+
 export const RESOURCE_CATEGORIES = [
   { id: 'resource-rds', title: 'Records Disposition Schedule (RDS)', type: 'resource' as const },
 ];
@@ -80,33 +109,12 @@ const DEFAULT_USERS: AppUser[] = [
   {
     id: 'user-admin-1',
     email: 'admin@dswd.gov.ph',
-    name: 'Administrative Officer (Admin)',
+    name: 'Administrator',
     password: 'admin123',
     role: 'admin',
     status: 'active',
     department: 'AD-RAMS Records Section',
     createdAt: '2025-01-15T08:00:00Z',
-  },
-  {
-    id: 'user-regular-2',
-    email: 'user@dswd.gov.ph',
-    name: 'Field Office Staff (User)',
-    password: 'user123',
-    role: 'user',
-    status: 'active',
-    department: 'Operations Division',
-    createdAt: '2025-02-10T09:30:00Z',
-  },
-  {
-    id: 'user-pending-1',
-    email: 'maria.santos@dswd.gov.ph',
-    name: 'Maria Santos',
-    password: 'user123',
-    role: 'user',
-    status: 'pending',
-    department: 'Community-Based Services Section',
-    requestedRole: 'user',
-    createdAt: '2026-03-01T08:30:00Z',
   },
 ];
 
@@ -382,7 +390,13 @@ export function getStoredUsers(): AppUser[] {
     const raw = localStorage.getItem(STORAGE_KEY_USERS);
     if (raw) {
       const parsed: AppUser[] = JSON.parse(raw);
-      return parsed.map((u) => sanitizeUserForFirestore(u));
+      // Filter out any mock dummy users like maria.santos or old demo user
+      const filtered = parsed.filter(
+        (u) =>
+          u.email.toLowerCase() !== 'maria.santos@dswd.gov.ph' &&
+          u.email.toLowerCase() !== 'user@dswd.gov.ph'
+      );
+      return filtered.map((u) => sanitizeUserForFirestore(u));
     }
   } catch (e) {
     console.error(e);
@@ -430,11 +444,7 @@ export function getStoredSopFiles(): SopFile[] {
     const raw = localStorage.getItem(STORAGE_KEY_FILES);
     if (raw) {
       const parsed: SopFile[] = JSON.parse(raw);
-      // Ensure administrative issuances files are removed per user request
-      const filtered = parsed.filter(
-        (f) => f.sopId !== 'issuance-2025' && f.sopId !== 'issuance-2026'
-      );
-      const sanitized = filtered.map((f) => sanitizeFileForFirestore(f));
+      const sanitized = parsed.map((f) => sanitizeFileForFirestore(f));
       let updated = [...sanitized];
       if (!updated.some((f) => f.sopId === 'resource-rds')) {
         const rdsInitial = INITIAL_SOP_FILES.filter((f) => f.sopId === 'resource-rds').map(sanitizeFileForFirestore);
@@ -450,10 +460,7 @@ export function getStoredSopFiles(): SopFile[] {
 
 export function saveStoredSopFiles(files: SopFile[]): void {
   try {
-    // Filter out any administrative issuances to ensure they remain empty
-    const sanitized = files
-      .filter((f) => f.sopId !== 'issuance-2025' && f.sopId !== 'issuance-2026')
-      .map((f) => sanitizeFileForFirestore(f));
+    const sanitized = files.map((f) => sanitizeFileForFirestore(f));
     localStorage.setItem(STORAGE_KEY_FILES, JSON.stringify(sanitized));
   } catch (e) {
     console.error(e);
@@ -493,7 +500,15 @@ export function subscribeToUsers(callback: (users: AppUser[]) => void): () => vo
         initialized = true;
         const list: AppUser[] = [];
         snapshot.forEach((d) => {
-          list.push(sanitizeUserForFirestore(d.data() as Partial<AppUser>));
+          const data = d.data() as Partial<AppUser>;
+          if (
+            data.email?.toLowerCase() === 'maria.santos@dswd.gov.ph' ||
+            data.email?.toLowerCase() === 'user@dswd.gov.ph'
+          ) {
+            deleteDoc(doc(db, 'users', d.id)).catch(() => {});
+            return;
+          }
+          list.push(sanitizeUserForFirestore(data));
         });
 
         // Ensure admin@dswd.gov.ph is always present and has role admin
@@ -555,12 +570,7 @@ export function subscribeToSopFiles(callback: (files: SopFile[]) => void): () =>
         const list: SopFile[] = [];
         snapshot.forEach((d) => {
           const item = sanitizeFileForFirestore(d.data() as Partial<SopFile>);
-          // Clean out any previously uploaded or seeded issuance documents from Firestore
-          if (item.sopId === 'issuance-2025' || item.sopId === 'issuance-2026') {
-            deleteDoc(doc(db, 'sopFiles', d.id)).catch(() => {});
-          } else {
-            list.push(item);
-          }
+          list.push(item);
         });
 
         // Ensure RDS resource files exist in Firestore
@@ -796,9 +806,17 @@ export async function uploadSopFile(file: SopFile): Promise<void> {
 
   // Cloud Firestore persistence
   try {
-    await setDoc(doc(db, 'sopFiles', clean.id), payload);
+    let cloudPayload = payload;
+    const jsonStr = JSON.stringify(payload);
+    if (jsonStr.length > 850000) {
+      cloudPayload = {
+        ...payload,
+        fileData: '',
+      };
+    }
+    await setDoc(doc(db, 'sopFiles', clean.id), cloudPayload);
   } catch (e: unknown) {
-    console.error('Firestore uploadSopFile error:', e);
+    console.warn('Firestore uploadSopFile notice:', e);
   }
 }
 
@@ -815,32 +833,44 @@ export async function deleteSopFile(fileId: string): Promise<void> {
   }
 }
 
-// Convert Google Drive link to preview embed URL
+// Detect if URL is a Google Docs link
+export function isGoogleDocsUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  return url.includes('docs.google.com/document');
+}
+
+// Detect if URL is Google Sheets
+export function isGoogleSheetsUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  return url.includes('docs.google.com/spreadsheets');
+}
+
+// Convert Google Drive / Google Docs link to preview embed URL
 export function getGoogleDriveEmbedUrl(url: string): string | null {
   if (!url) return null;
+
+  // Google Docs: /document/d/{ID}/... or /document/u/{N}/d/{ID}/...
+  const docMatch = url.match(/\/document\/(?:u\/[0-9]+\/)?d\/([a-zA-Z0-9_-]+)/);
+  if (docMatch && docMatch[1]) {
+    return `https://docs.google.com/document/d/${docMatch[1]}/preview`;
+  }
+
+  // Google Sheets: /spreadsheets/d/{ID}/... or /spreadsheets/u/{N}/d/{ID}/...
+  const sheetMatch = url.match(/\/spreadsheets\/(?:u\/[0-9]+\/)?d\/([a-zA-Z0-9_-]+)/);
+  if (sheetMatch && sheetMatch[1]) {
+    return `https://docs.google.com/spreadsheets/d/${sheetMatch[1]}/preview`;
+  }
+
+  // Google Presentation: /presentation/d/{ID}/... or /presentation/u/{N}/d/{ID}/...
+  const presMatch = url.match(/\/presentation\/(?:u\/[0-9]+\/)?d\/([a-zA-Z0-9_-]+)/);
+  if (presMatch && presMatch[1]) {
+    return `https://docs.google.com/presentation/d/${presMatch[1]}/preview`;
+  }
 
   // File link: /file/d/{ID}/...
   const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (fileMatch && fileMatch[1]) {
     return `https://drive.google.com/file/d/${fileMatch[1]}/preview`;
-  }
-
-  // Google Docs: /document/d/{ID}/...
-  const docMatch = url.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
-  if (docMatch && docMatch[1]) {
-    return `https://docs.google.com/document/d/${docMatch[1]}/preview`;
-  }
-
-  // Google Sheets: /spreadsheets/d/{ID}/...
-  const sheetMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-  if (sheetMatch && sheetMatch[1]) {
-    return `https://docs.google.com/spreadsheets/d/${sheetMatch[1]}/preview`;
-  }
-
-  // Google Presentation: /presentation/d/{ID}/...
-  const presMatch = url.match(/\/presentation\/d\/([a-zA-Z0-9_-]+)/);
-  if (presMatch && presMatch[1]) {
-    return `https://docs.google.com/presentation/d/${presMatch[1]}/preview`;
   }
 
   // Google Drive folder: /folders/{ID}
@@ -856,4 +886,176 @@ export function getGoogleDriveEmbedUrl(url: string): string | null {
   }
 
   return null;
+}
+
+// ==========================================
+// MESSENGERIAL SERVICES (CO.PSP, PSP, POSTAL)
+// ==========================================
+
+const STORAGE_KEY_MESSENGERIAL = 'rams_messengerial_records_v1';
+
+export function sanitizeMessengerialRecord(
+  rec: Partial<MessengerialRecord>
+): MessengerialRecord {
+  const category: MessengerialCategory =
+    rec.category === 'CO.PSP' || rec.category === 'PSP' || rec.category === 'POSTAL'
+      ? rec.category
+      : 'CO.PSP';
+
+  const status: MessengerialStatus =
+    rec.status === 'Dispatched' ||
+    rec.status === 'In Transit' ||
+    rec.status === 'Out for Delivery' ||
+    rec.status === 'Delivered' ||
+    rec.status === 'Pending Carrier Pickup'
+      ? rec.status
+      : 'Dispatched';
+
+  return {
+    id: String(rec.id || `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`),
+    category,
+    trackingNumber: String(rec.trackingNumber || '').trim(),
+    courier: String(rec.courier || 'LBC Express').trim(),
+    recipient: String(rec.recipient || '').trim(),
+    recipientOffice: String(rec.recipientOffice || '').trim(),
+    sender: String(rec.sender || 'AD-RAMS Records Section FO 1').trim(),
+    subject: String(rec.subject || '').trim(),
+    dispatchDate: String(rec.dispatchDate || new Date().toISOString().split('T')[0]),
+    status,
+    trackingUrl: String(rec.trackingUrl || '').trim(),
+    attachmentName: String(rec.attachmentName || ''),
+    attachmentData: String(rec.attachmentData || ''),
+    driveUrl: String(rec.driveUrl || ''),
+    isDriveLink: Boolean(rec.isDriveLink),
+    remarks: String(rec.remarks || ''),
+    postedBy: String(rec.postedBy || 'admin@dswd.gov.ph'),
+    postedAt: String(rec.postedAt || new Date().toISOString()),
+  };
+}
+
+export function getStoredMessengerialRecords(): MessengerialRecord[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_MESSENGERIAL);
+    if (raw) {
+      const parsed: MessengerialRecord[] = JSON.parse(raw);
+      return parsed.map(sanitizeMessengerialRecord);
+    }
+  } catch (e) {
+    console.error(e);
+  }
+  return [];
+}
+
+export function saveStoredMessengerialRecords(records: MessengerialRecord[]): void {
+  try {
+    const sanitized = records.map(sanitizeMessengerialRecord);
+    localStorage.setItem(STORAGE_KEY_MESSENGERIAL, JSON.stringify(sanitized));
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+/**
+ * Subscribes to real-time updates for Messengerial Records across all tabs
+ * and devices via Firebase Firestore.
+ */
+export function subscribeToMessengerialRecords(
+  callback: (records: MessengerialRecord[]) => void
+): () => void {
+  // Emit initial local cache immediately
+  callback(getStoredMessengerialRecords());
+
+  const unsubscribe = onSnapshot(
+    collection(db, 'messengerialRecords'),
+    (snapshot) => {
+      const list: MessengerialRecord[] = [];
+      snapshot.forEach((d) => {
+        list.push(sanitizeMessengerialRecord(d.data() as Partial<MessengerialRecord>));
+      });
+      // Sort newest dispatch date or postedAt first
+      list.sort((a, b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime());
+      saveStoredMessengerialRecords(list);
+      callback(list);
+    },
+    (error) => {
+      console.warn('Firestore messengerialRecords subscription notice:', error);
+      callback(getStoredMessengerialRecords());
+    }
+  );
+
+  return unsubscribe;
+}
+
+export async function createMessengerialRecord(
+  data: Omit<MessengerialRecord, 'id' | 'postedAt'>
+): Promise<MessengerialRecord> {
+  const newRecord = sanitizeMessengerialRecord({
+    ...data,
+    id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    postedAt: new Date().toISOString(),
+  });
+
+  // Immediate local update
+  const current = getStoredMessengerialRecords();
+  saveStoredMessengerialRecords([newRecord, ...current.filter((r) => r.id !== newRecord.id)]);
+
+  // Cloud Firestore persistence
+  try {
+    const payload = cleanFirestorePayload(newRecord);
+    await setDoc(doc(db, 'messengerialRecords', newRecord.id), payload);
+  } catch (e) {
+    console.error('Firestore createMessengerialRecord error:', e);
+  }
+
+  return newRecord;
+}
+
+export async function updateMessengerialRecord(
+  id: string,
+  updates: Partial<MessengerialRecord>
+): Promise<void> {
+  const current = getStoredMessengerialRecords();
+  const updated = current.map((r) => (r.id === id ? sanitizeMessengerialRecord({ ...r, ...updates }) : r));
+  saveStoredMessengerialRecords(updated);
+
+  // Cloud Firestore persistence
+  try {
+    const payload = cleanFirestorePayload(updates);
+    await updateDoc(doc(db, 'messengerialRecords', id), payload);
+  } catch (e) {
+    console.error('Firestore updateMessengerialRecord error:', e);
+  }
+}
+
+export async function deleteMessengerialRecord(id: string): Promise<void> {
+  const current = getStoredMessengerialRecords();
+  saveStoredMessengerialRecords(current.filter((r) => r.id !== id));
+
+  // Cloud Firestore persistence
+  try {
+    await deleteDoc(doc(db, 'messengerialRecords', id));
+  } catch (e) {
+    console.error('Firestore deleteMessengerialRecord error:', e);
+  }
+}
+
+/**
+ * Helper to generate official carrier tracking lookup URLs.
+ */
+export function getCarrierTrackingUrl(courier: string, trackingNumber: string): string {
+  const cleanNum = trackingNumber.trim().replace(/\s+/g, '');
+  const lower = courier.toLowerCase();
+  if (lower.includes('lbc')) {
+    return `https://www.lbcexpress.com/track/?tracking_no=${encodeURIComponent(cleanNum)}`;
+  }
+  if (lower.includes('j&t') || lower.includes('jt')) {
+    return `https://www.jtexpress.ph/trajectoryQuery?bills=${encodeURIComponent(cleanNum)}`;
+  }
+  if (lower.includes('postal') || lower.includes('philpost') || lower.includes('phlpost')) {
+    return `https://tracking.phlpost.gov.ph/`;
+  }
+  if (lower.includes('2go')) {
+    return `https://supplychain.2go.com.ph/tracking/index.asp`;
+  }
+  return `https://www.google.com/search?q=${encodeURIComponent(courier + ' tracking ' + cleanNum)}`;
 }

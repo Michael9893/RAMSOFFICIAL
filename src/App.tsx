@@ -13,12 +13,15 @@ import {
 import {
   AppUser,
   SopFile,
+  MessengerialRecord,
   getStoredUsers,
   getStoredSopFiles,
+  getStoredMessengerialRecords,
   getCurrentUser,
   setCurrentUser,
   subscribeToUsers,
   subscribeToSopFiles,
+  subscribeToMessengerialRecords,
 } from './lib/authStore.ts';
 import { AdminPanel } from './components/AdminPanel.tsx';
 import { SopFileViewerModal } from './components/SopFileViewerModal.tsx';
@@ -26,6 +29,7 @@ import { GoogleDrivePreviewModal } from './components/GoogleDrivePreviewModal.ts
 import { LoginModal } from './components/LoginModal.tsx';
 import { ResourcesView } from './components/ResourcesView.tsx';
 import { AdministrativeIssuancesView } from './components/AdministrativeIssuancesView.tsx';
+import { MessengerialView } from './components/MessengerialView.tsx';
 
 interface SopItem {
   id: string;
@@ -57,6 +61,7 @@ export default function App() {
   });
   const [users, setUsers] = useState<AppUser[]>(getStoredUsers());
   const [sopFiles, setSopFiles] = useState<SopFile[]>(getStoredSopFiles());
+  const [messengerialRecords, setMessengerialRecords] = useState<MessengerialRecord[]>(getStoredMessengerialRecords());
 
   // Track if user has entered the portal (either by signing in or continuing as guest)
   const [hasEnteredPortal, setHasEnteredPortal] = useState<boolean>(() => {
@@ -110,15 +115,22 @@ export default function App() {
       setSopFiles(freshFiles);
     });
 
+    // 3. Subscribe to Messengerial records (CO.PSP, PSP, POSTAL)
+    const unsubMessengerial = subscribeToMessengerialRecords((freshRecords) => {
+      setMessengerialRecords(freshRecords);
+    });
+
     return () => {
       unsubUsers();
       unsubFiles();
+      unsubMessengerial();
     };
   }, []);
 
   const handleRefreshData = () => {
     setUsers(getStoredUsers());
     setSopFiles(getStoredSopFiles());
+    setMessengerialRecords(getStoredMessengerialRecords());
     const cur = getCurrentUser();
     if (cur) setLocalCurrentUser(cur);
   };
@@ -265,7 +277,30 @@ export default function App() {
               <div className="pt-4 pb-4">
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-x-3 sm:gap-x-4 gap-y-6 sm:gap-y-7 items-start justify-items-center">
                   {sopItems.map((item) => {
-                    const count = sopFiles.filter((f) => f.sopId === item.id).length;
+                    const count =
+                      item.id === 'messengerial'
+                        ? messengerialRecords.length
+                        : item.id === 'issuances'
+                        ? sopFiles.filter(
+                            (f) =>
+                              f.sopId === 'issuance-2025' ||
+                              f.sopId === 'issuance-2026' ||
+                              f.sopId === 'issuances'
+                          ).length
+                        : sopFiles.filter((f) => f.sopId === item.id).length;
+
+                    const handleItemClick = () => {
+                      if (item.id === 'messengerial') {
+                        setActiveTab('messengerial');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      } else if (item.id === 'issuances') {
+                        setActiveTab('issuances-2026');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      } else {
+                        setActiveViewerSop(item);
+                      }
+                    };
+
                     return (
                       <div
                         key={item.id}
@@ -273,14 +308,18 @@ export default function App() {
                       >
                         {/* Icon illustration container */}
                         <div
-                          onClick={() => setActiveViewerSop(item)}
+                          onClick={handleItemClick}
                           className={`relative w-full flex items-center justify-center p-3 rounded-xl border shadow-xs transition-all group-hover:scale-105 cursor-pointer ${
                             isDark
                               ? 'bg-slate-900 border-slate-800 hover:bg-slate-850 hover:border-sky-500 hover:shadow-sky-950/40'
                               : 'bg-slate-50 hover:bg-sky-50/70 border-slate-200/80 hover:border-sky-300 hover:shadow-sm'
                           }`}
                           aria-label={item.title}
-                          title="Click to view, download, or preview documents for this SOP"
+                          title={
+                            item.id === 'messengerial'
+                              ? 'Open Messengerial Services Tracking Portal (CO.PSP, PSP, POSTAL)'
+                              : 'Click to view, download, or preview documents for this SOP'
+                          }
                         >
                           {item.icon}
                           {count > 0 && (
@@ -292,7 +331,7 @@ export default function App() {
 
                         {/* Underlined link label */}
                         <button
-                          onClick={() => setActiveViewerSop(item)}
+                          onClick={handleItemClick}
                           className={`mt-2 underline text-[11px] sm:text-xs leading-tight text-center font-semibold transition-colors cursor-pointer ${
                             isDark
                               ? 'text-sky-400 hover:text-sky-300'
@@ -308,6 +347,15 @@ export default function App() {
               </div>
             </section>
           </>
+        ) : activeTab === 'messengerial' ? (
+          /* MESSENGERIAL TAB: CO.PSP, PSP, AND POSTAL TRACKER */
+          <MessengerialView
+            currentUser={currentUser}
+            records={messengerialRecords}
+            onRefreshData={handleRefreshData}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
+            theme={theme}
+          />
         ) : activeTab === 'resources' ? (
           /* RESOURCES TAB: RECORDS DISPOSITION SCHEDULE (RDS) */
           <ResourcesView

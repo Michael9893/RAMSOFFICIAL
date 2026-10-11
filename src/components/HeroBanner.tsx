@@ -14,9 +14,10 @@ import {
   FileText,
   Calendar,
   Layers,
+  Package,
 } from 'lucide-react';
 
-export type AppTab = 'home' | 'resources' | 'issuances-2025' | 'issuances-2026' | 'issuances-all';
+export type AppTab = 'home' | 'messengerial' | 'resources' | 'issuances-2025' | 'issuances-2026' | 'issuances-all';
 
 interface HeroBannerProps {
   currentUser: AppUser | null;
@@ -115,6 +116,22 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               }`}
             >
               Home
+            </button>
+
+            {/* Messengerial Services Tab */}
+            <button
+              onClick={() => {
+                onSelectTab('messengerial');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'messengerial'
+                  ? 'text-sky-300 font-bold border-b-2 border-sky-300 pb-0.5'
+                  : 'text-sky-100 hover:text-white'
+              }`}
+            >
+              <Package className="w-4 h-4 text-sky-300" />
+              <span>Messengerial</span>
             </button>
 
             <button
@@ -228,25 +245,6 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                     </span>
                   </button>
 
-                  {/* View All option */}
-                  <div className="border-t border-slate-100 my-1" />
-                  <button
-                    onClick={() => {
-                      setIssuancesDropdownOpen(false);
-                      onSelectTab('issuances-all');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className={`w-full text-left px-4 py-2 text-[13px] font-medium transition-colors cursor-pointer flex items-center justify-between ${
-                      activeTab === 'issuances-all'
-                        ? 'bg-sky-50 text-sky-900 font-bold'
-                        : 'text-slate-700 hover:bg-sky-50 hover:text-sky-900'
-                    }`}
-                  >
-                    <span>All Administrative Issuances</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-slate-100 text-slate-700">
-                      All
-                    </span>
-                  </button>
                 </div>
               )}
             </div>
@@ -363,7 +361,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             isDark ? 'border-slate-800' : 'border-[#1b3478]'
           }`}>
             {/* Primary Nav links */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button
                 onClick={() => {
                   onSelectTab('home');
@@ -376,6 +374,21 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 }`}
               >
                 Home
+              </button>
+
+              <button
+                onClick={() => {
+                  onSelectTab('messengerial');
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full py-2.5 px-3 rounded-lg text-left text-xs font-bold transition-colors flex items-center gap-1.5 ${
+                  activeTab === 'messengerial'
+                    ? 'bg-sky-500 text-white font-black'
+                    : 'bg-[#173273] text-sky-100 hover:bg-[#20408d]'
+                }`}
+              >
+                <Package className="w-3.5 h-3.5 text-sky-300" />
+                <span>Messengerial</span>
               </button>
 
               <button
@@ -442,22 +455,6 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                     </span>
                   </button>
 
-                  <button
-                    onClick={() => {
-                      onSelectTab('issuances-all');
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`w-full text-left py-2 px-2.5 rounded text-xs font-semibold flex items-center justify-between ${
-                      activeTab === 'issuances-all'
-                        ? 'bg-sky-500 text-white font-bold'
-                        : 'text-sky-100 hover:bg-[#1a357c]'
-                    }`}
-                  >
-                    <span>All Administrative Issuances</span>
-                    <span className="text-[10px] px-1.5 py-0.2 bg-white/20 text-white rounded">
-                      All
-                    </span>
-                  </button>
                 </div>
               )}
             </div>
@@ -619,6 +616,54 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             </h1>
             <p className="mt-1 text-[11px] sm:text-sm md:text-base font-bold tracking-widest text-sky-200 uppercase drop-shadow">
               Records and Archives Management System
+            </p>
+          </div>
+        </div>
+      ) : activeTab === 'messengerial' ? (
+        /* MESSENGERIAL SERVICES HERO: "MESSENGERIAL SERVICES" */
+        <div className={`relative w-full h-56 sm:h-72 md:h-80 overflow-hidden flex items-center justify-center ${
+          isDark ? 'bg-[#091838]' : 'bg-[#0a2360]'
+        }`}>
+          {/* Subtle geometric logistics grid pattern */}
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+
+          {/* Left Teal / Blue Logistics Ribbon */}
+          <div className="absolute left-0 bottom-0 top-0 w-32 sm:w-48 pointer-events-none opacity-65">
+            <svg viewBox="0 0 160 200" className="w-full h-full" preserveAspectRatio="none">
+              <polygon points="0,0 100,0 30,200 0,200" fill="#0284c7" />
+              <polygon points="100,0 140,0 70,200 30,200" fill="#14b8a6" />
+            </svg>
+          </div>
+
+          {/* Right Red / Gold Chevron Cargo Accent */}
+          <div className="absolute right-0 bottom-0 top-0 w-40 sm:w-64 pointer-events-none opacity-70">
+            <svg viewBox="0 0 180 200" className="w-full h-full" preserveAspectRatio="none">
+              <polygon points="80,200 180,30 180,200" fill="#dc2626" />
+              <polygon points="30,200 130,30 155,30 55,200" fill="#facc15" />
+            </svg>
+          </div>
+
+          {/* Foreground Title & Logistics Badges */}
+          <div className="relative z-10 px-4 sm:px-10 max-w-6xl w-full text-center select-none space-y-1.5 sm:space-y-2">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 backdrop-blur-xs border border-white/20 text-sky-200 text-[10.5px] sm:text-xs font-bold uppercase tracking-wider">
+              <span>Unitized Logistic Tracker</span>
+              <span>•</span>
+              <span className="text-amber-300 font-mono">CO.PSP • PSP • POSTAL</span>
+            </div>
+
+            <h1
+              className="text-2xl sm:text-4xl md:text-5xl lg:text-[4.2rem] font-black tracking-tight uppercase text-white leading-tight drop-shadow-md"
+              style={{
+                fontFamily: "'Montserrat', system-ui, sans-serif",
+                letterSpacing: '-0.02em',
+                textShadow: '0 4px 16px rgba(0,0,0,0.65), 0 2px 4px rgba(0,0,0,0.85)',
+              }}
+            >
+              MESSENGERIAL SERVICES
+            </h1>
+
+            <p className="text-xs sm:text-sm md:text-base font-semibold text-sky-100 max-w-2xl mx-auto drop-shadow-sm">
+              Official Courier & Mail Dispatch Tracking • DSWD FO1 LA UNION
             </p>
           </div>
         </div>

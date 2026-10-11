@@ -336,7 +336,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               /* ======================================================== */
               /* SIGN IN FORM */
               /* ======================================================== */
-              <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <form onSubmit={handleLoginSubmit} className="space-y-4" autoComplete="off">
                 <div className="space-y-1">
                   <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                     Sign in to RAMS:THE  VAULT
@@ -472,8 +472,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                       </p>
                       <div className="p-3 bg-white/70 dark:bg-slate-900/60 rounded-lg border border-emerald-200 dark:border-emerald-800 text-[11px] space-y-1">
                         <div className="flex justify-between">
-                          <span className="text-slate-500">Requested Access:</span>
-                          <span className="font-bold text-slate-800 dark:text-slate-200 uppercase">{regSuccessUser.requestedRole}</span>
+                          <span className="text-slate-500">Account Type:</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">Standard User</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-500">Status:</span>
@@ -502,7 +502,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   </div>
                 ) : (
                   /* Registration fields */
-                  <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
+                  <form onSubmit={handleRegisterSubmit} className="space-y-3.5" autoComplete="off">
                     <div className="space-y-1">
                       <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                         Register for RAMS:THE  VAULT
@@ -554,44 +554,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Department & Requested Role */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                          Division / Section (Optional)
-                        </label>
-                        <div className="relative">
-                          <Building className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                          <input
-                            type="text"
-                            value={regDepartment}
-                            onChange={(e) => setRegDepartment(e.target.value)}
-                            placeholder="Division or section (optional)"
-                            className={`w-full pl-9 pr-3.5 py-2 text-xs rounded-lg border focus:outline-none transition-colors ${
-                              isDark
-                                ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:border-sky-500'
-                                : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-sky-500'
-                            }`}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                          Requested Access Level *
-                        </label>
-                        <select
-                          value={regRequestedRole}
-                          onChange={(e) => setRegRequestedRole(e.target.value as UserRole)}
-                          className={`w-full px-3 py-2 text-xs rounded-lg border focus:outline-none cursor-pointer ${
+                    {/* Division / Section (Optional) */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Division / Section (Optional)
+                      </label>
+                      <div className="relative">
+                        <Building className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                        <input
+                          type="text"
+                          value={regDepartment}
+                          onChange={(e) => setRegDepartment(e.target.value)}
+                          placeholder="Division or section (optional)"
+                          className={`w-full pl-9 pr-3.5 py-2 text-xs rounded-lg border focus:outline-none transition-colors ${
                             isDark
-                              ? 'bg-slate-800 border-slate-700 text-white focus:border-sky-500'
-                              : 'bg-white border-slate-300 text-slate-900 focus:border-sky-500'
+                              ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:border-sky-500'
+                              : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-sky-500'
                           }`}
-                        >
-                          <option value="user">User (View & Download Only)</option>
-                          <option value="admin">Administrator (Upload & Management)</option>
-                        </select>
+                        />
                       </div>
                     </div>
 

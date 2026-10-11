@@ -10,6 +10,9 @@ service cloud.firestore {
     match /sopFiles/{fileId} {
       allow read, write: if true;
     }
+    match /messengerialRecords/{recordId} {
+      allow read, write: if true;
+    }
   }
 }
 

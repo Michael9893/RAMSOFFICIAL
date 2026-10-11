@@ -17,6 +17,7 @@ import {
   TEMPLATE_CATEGORIES,
   RESOURCE_CATEGORIES,
   ISSUANCE_CATEGORIES,
+  isGoogleDocsUrl,
 } from '../lib/authStore.ts';
 import {
   Shield,
@@ -91,7 +92,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Create User state
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserPassword, setNewUserPassword] = useState('dswd123');
+  const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<UserRole>('user');
   const [createLoading, setCreateLoading] = useState(false);
   const [createSuccess, setCreateSuccess] = useState('');
@@ -218,13 +219,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setUploadSuccess('');
 
       try {
+        const isDoc = isGoogleDocsUrl(driveUrl.trim());
         const newDriveFile: SopFile = {
           id: `drive-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
           sopId: selectedSectionId,
           sopTitle: targetTitle,
           fileName: driveTitle.trim(),
-          fileSize: 'Google Drive',
-          fileType: 'google-drive',
+          fileSize: isDoc ? 'Google Docs' : 'Google Drive',
+          fileType: isDoc ? 'google-docs' : 'google-drive',
           fileData: driveUrl.trim(),
           isDriveLink: true,
           driveUrl: driveUrl.trim(),
@@ -245,7 +247,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         setDriveTitle('');
         setDriveUrl('');
         setDriveDescription('');
-        setUploadSuccess(`Successfully added Google Drive link "${newDriveFile.fileName}" for ${targetTitle}!`);
+        setUploadSuccess(
+          `Successfully added ${isDoc ? 'Google Docs' : 'Google Drive'} link "${newDriveFile.fileName}" for ${targetTitle}!`
+        );
       } catch (err) {
         setUploadError('Failed to save link: ' + (err as Error).message);
       } finally {
@@ -477,10 +481,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <div>
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <Upload className="w-5 h-5 text-sky-600" />
-                Upload Documents & Google Drive Links
+                Upload Documents & Google Docs / Drive Links
               </h2>
               <p className="text-xs text-slate-600 mt-1">
-                Upload local files or add Google Drive links for Standard Operating Procedures (SOPs), Records Disposition Schedule (RDS), or Template Categories.
+                Upload local files or add Google Docs and Google Drive links for Standard Operating Procedures (SOPs), Administrative Issuances, Records Disposition Schedule (RDS), or Template Categories.
               </p>
             </div>
 
@@ -509,7 +513,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 }`}
               >
                 <LinkIcon className="w-3.5 h-3.5" />
-                <span>Add Google Drive Link</span>
+                <span>Add Google Docs / Drive Link</span>
               </button>
             </div>
 
@@ -534,7 +538,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       ))}
                     </optgroup>
                     <optgroup label="Standard Operating Procedures (SOPs)">
-                      {SOP_CATEGORIES.map((sop) => (
+                      {SOP_CATEGORIES.filter((sop) => sop.id !== 'messengerial').map((sop) => (
                         <option key={sop.id} value={sop.id}>
                           SOP: {sop.title}
                         </option>
@@ -742,9 +746,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           </td>
                           <td className="px-4 py-3 text-slate-600 text-[11px]">
                             {file.isDriveLink ? (
-                              <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded font-semibold text-[10px]">
-                                Google Drive
-                              </span>
+                              isGoogleDocsUrl(file.driveUrl || file.fileData) ? (
+                                <span className="px-2 py-0.5 bg-blue-50 border border-blue-300 text-blue-800 rounded font-semibold text-[10px]">
+                                  Google Docs
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded font-semibold text-[10px]">
+                                  Google Drive
+                                </span>
+                              )
                             ) : (
                               <span className="font-mono">{file.fileSize}</span>
                             )}
@@ -981,7 +991,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 Manually Pre-Approve & Create Account
               </h3>
 
-              <form onSubmit={handleCreateUserSubmit} className="space-y-4">
+              <form onSubmit={handleCreateUserSubmit} className="space-y-4" autoComplete="off">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Full Name */}
                   <div>
@@ -990,6 +1000,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </label>
                     <input
                       type="text"
+                      autoComplete="off"
                       value={newUserName}
                       onChange={(e) => setNewUserName(e.target.value)}
                       placeholder="Full name"
@@ -1004,6 +1015,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </label>
                     <input
                       type="email"
+                      autoComplete="off"
                       value={newUserEmail}
                       onChange={(e) => setNewUserEmail(e.target.value)}
                       placeholder="Official email address"
@@ -1017,10 +1029,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       Initial Password *
                     </label>
                     <input
-                      type="text"
+                      type="password"
+                      autoComplete="new-password"
                       value={newUserPassword}
                       onChange={(e) => setNewUserPassword(e.target.value)}
-                      placeholder="Initial password"
+                      placeholder="Password"
                       className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 font-mono focus:outline-none focus:border-sky-500"
                     />
                   </div>
