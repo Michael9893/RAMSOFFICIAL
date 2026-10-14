@@ -30,6 +30,11 @@ import { LoginModal } from './components/LoginModal.tsx';
 import { ResourcesView } from './components/ResourcesView.tsx';
 import { AdministrativeIssuancesView } from './components/AdministrativeIssuancesView.tsx';
 import { MessengerialView } from './components/MessengerialView.tsx';
+import {
+  subscribeToNotifications,
+  AppNotification,
+} from './lib/notificationStore.ts';
+import { NotificationsModal } from './components/NotificationsModal.tsx';
 
 interface SopItem {
   id: string;
@@ -72,6 +77,8 @@ export default function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [activeViewerSop, setActiveViewerSop] = useState<SopItem | null>(null);
   const [previewDriveFile, setPreviewDriveFile] = useState<SopFile | null>(null);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
 
   // Apply theme class to document body & root
   useEffect(() => {
@@ -120,10 +127,16 @@ export default function App() {
       setMessengerialRecords(freshRecords);
     });
 
+    // 4. Subscribe to Real-Time Announcements & Notifications
+    const unsubNotifications = subscribeToNotifications((freshNotifs) => {
+      setNotifications(freshNotifs);
+    });
+
     return () => {
       unsubUsers();
       unsubFiles();
       unsubMessengerial();
+      unsubNotifications();
     };
   }, []);
 
@@ -224,6 +237,8 @@ export default function App() {
         }}
         theme={theme}
         onToggleTheme={toggleTheme}
+        notifications={notifications}
+        onOpenNotifications={() => setIsNotificationsModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -469,6 +484,40 @@ export default function App() {
         onClose={() => {
           setHasEnteredPortal(true);
           setIsLoginModalOpen(false);
+        }}
+        theme={theme}
+      />
+
+      {/* Real-time Notifications & Announcements Drawer */}
+      <NotificationsModal
+        isOpen={isNotificationsModalOpen}
+        onClose={() => setIsNotificationsModalOpen(false)}
+        notifications={notifications}
+        currentUser={currentUser}
+        onNavigateToSection={(sectionId, fileId) => {
+          if (
+            sectionId === 'issuances-2025' ||
+            sectionId === 'issuances-2026' ||
+            sectionId === 'messengerial' ||
+            sectionId === 'resources'
+          ) {
+            setActiveTab(sectionId as AppTab);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+          if (fileId) {
+            const foundFile = sopFiles.find((f) => f.id === fileId);
+            if (foundFile) {
+              if (foundFile.isDriveLink) {
+                setPreviewDriveFile(foundFile);
+              } else {
+                setActiveViewerSop({
+                  id: foundFile.sopId,
+                  title: foundFile.sopTitle,
+                  icon: null,
+                });
+              }
+            }
+          }
         }}
         theme={theme}
       />

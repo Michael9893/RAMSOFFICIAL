@@ -15,7 +15,9 @@ import {
   Calendar,
   Layers,
   Package,
+  Bell,
 } from 'lucide-react';
+import { AppNotification } from '../lib/notificationStore.ts';
 
 export type AppTab = 'home' | 'messengerial' | 'resources' | 'issuances-2025' | 'issuances-2026' | 'issuances-all';
 
@@ -29,6 +31,8 @@ interface HeroBannerProps {
   onSelectTemplateCategory: (categoryId: string, title: string) => void;
   theme?: 'light' | 'dark';
   onToggleTheme: () => void;
+  notifications?: AppNotification[];
+  onOpenNotifications?: () => void;
 }
 
 export const HeroBanner: React.FC<HeroBannerProps> = ({
@@ -41,8 +45,12 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   onSelectTemplateCategory,
   theme = 'light',
   onToggleTheme,
+  notifications = [],
+  onOpenNotifications,
 }) => {
   const isDark = theme === 'dark';
+  const userEmail = currentUser?.email || 'guest@dswd.gov.ph';
+  const unreadNotifs = notifications.filter((n) => !n.readBy.includes(userEmail)).length;
   const [templatesDropdownOpen, setTemplatesDropdownOpen] = useState(false);
   const [issuancesDropdownOpen, setIssuancesDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -250,8 +258,28 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             </div>
           </nav>
 
-          {/* Desktop Right side: Dark Mode Toggle, Login Status & Admin Side Button */}
+          {/* Desktop Right side: Notifications, Dark Mode Toggle, Login Status & Admin Side Button */}
           <div className="hidden lg:flex items-center gap-2.5 text-xs">
+            {/* Notification Bell with Badge */}
+            <button
+              onClick={onOpenNotifications}
+              className={`relative p-2 rounded-lg border transition-all cursor-pointer flex items-center justify-center ${
+                unreadNotifs > 0
+                  ? 'bg-amber-400/25 border-amber-300 text-amber-200 hover:bg-amber-400/35'
+                  : isDark
+                  ? 'bg-slate-800/80 border-slate-700 text-sky-200 hover:bg-slate-800'
+                  : 'bg-[#173273] border-[#2b4c9e] text-sky-200 hover:bg-[#1e4094]'
+              }`}
+              title={`Bulletins & Notifications (${unreadNotifs} unread)`}
+            >
+              <Bell className="w-4 h-4 text-amber-300" />
+              {unreadNotifs > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-rose-500 text-white font-black text-[9px] rounded-full flex items-center justify-center ring-2 ring-[#0d2159] animate-pulse">
+                  {unreadNotifs > 9 ? '9+' : unreadNotifs}
+                </span>
+              )}
+            </button>
+
             {/* Theme Toggle Button */}
             <button
               onClick={onToggleTheme}
@@ -333,8 +361,28 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             )}
           </div>
 
-          {/* Mobile Right Bar: Theme toggle + Hamburger menu button */}
+          {/* Mobile Right Bar: Notifications + Theme toggle + Hamburger menu button */}
           <div className="flex lg:hidden items-center gap-2">
+            {/* Mobile Notification Bell */}
+            <button
+              onClick={onOpenNotifications}
+              className={`relative p-2 rounded-lg border transition-all cursor-pointer ${
+                unreadNotifs > 0
+                  ? 'bg-amber-400/25 border-amber-300 text-amber-200'
+                  : isDark
+                  ? 'bg-slate-800 border-slate-700 text-sky-200'
+                  : 'bg-[#173273] border-[#2b4c9e] text-sky-200'
+              }`}
+              title={`Bulletins & Notifications (${unreadNotifs})`}
+            >
+              <Bell className="w-4 h-4 text-amber-300" />
+              {unreadNotifs > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-0.5 bg-rose-500 text-white font-black text-[9px] rounded-full flex items-center justify-center ring-2 ring-[#0d2159]">
+                  {unreadNotifs}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={onToggleTheme}
               className={`p-2 rounded-lg border transition-colors cursor-pointer text-amber-300 ${

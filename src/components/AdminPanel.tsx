@@ -18,6 +18,7 @@ import {
   RESOURCE_CATEGORIES,
   ISSUANCE_CATEGORIES,
 } from '../lib/authStore.ts';
+import { createNotification } from '../lib/notificationStore.ts';
 import {
   Shield,
   Upload,
@@ -185,6 +186,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           };
 
           await uploadSopFile(newFile);
+          createNotification({
+            type: 'upload',
+            title: `New Document Uploaded: ${newFile.fileName}`,
+            message: `Admin uploaded "${newFile.fileName}" for ${newFile.sopTitle}. Tap to view.`,
+            createdBy: currentUser.email,
+            priority: 'normal',
+            targetSection: selectedSectionId,
+            targetTitle: targetTitle,
+            fileId: newFile.id,
+            isDriveLink: false,
+          }).catch(() => {});
+
           onRefreshData();
           setSelectedFile(null);
           setFileDescription('');
@@ -202,9 +215,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         setUploadLoading(false);
       }
     } else {
-      // Google Drive Link Upload
+      // Google Drive / Google Docs Link Upload
       if (!driveTitle.trim() || !driveUrl.trim()) {
-        setUploadError('Please enter both a Title and a valid Google Drive link.');
+        setUploadError('Please enter both a Title and a valid Google Docs or Google Drive link.');
         return;
       }
 
@@ -218,13 +231,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       setUploadSuccess('');
 
       try {
+        const isGoogleDocs = driveUrl.includes('docs.google.com/document');
         const newDriveFile: SopFile = {
           id: `drive-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
           sopId: selectedSectionId,
           sopTitle: targetTitle,
           fileName: driveTitle.trim(),
-          fileSize: 'Google Drive',
-          fileType: 'google-drive',
+          fileSize: isGoogleDocs ? 'Google Docs' : 'Google Drive',
+          fileType: isGoogleDocs ? 'google-docs' : 'google-drive',
           fileData: driveUrl.trim(),
           isDriveLink: true,
           driveUrl: driveUrl.trim(),
@@ -241,11 +255,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         };
 
         await uploadSopFile(newDriveFile);
+        createNotification({
+          type: 'upload',
+          title: `New ${isGoogleDocs ? 'Google Docs' : 'Resource'} Published: ${newDriveFile.fileName}`,
+          message: `Admin posted a new ${isGoogleDocs ? 'Google Docs document' : 'Google Drive resource'} for ${targetTitle}. Interactive preview is available.`,
+          createdBy: currentUser.email,
+          priority: 'normal',
+          targetSection: selectedSectionId,
+          targetTitle: targetTitle,
+          fileId: newDriveFile.id,
+          fileUrl: driveUrl.trim(),
+          isDriveLink: true,
+        }).catch(() => {});
+
         onRefreshData();
         setDriveTitle('');
         setDriveUrl('');
         setDriveDescription('');
-        setUploadSuccess(`Successfully added Google Drive link "${newDriveFile.fileName}" for ${targetTitle}!`);
+        setUploadSuccess(`Successfully added ${isGoogleDocs ? 'Google Docs' : 'Google Drive'} link "${newDriveFile.fileName}" for ${targetTitle}!`);
       } catch (err) {
         setUploadError('Failed to save link: ' + (err as Error).message);
       } finally {
@@ -477,15 +504,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <div>
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <Upload className="w-5 h-5 text-sky-600" />
-                Upload Documents & Google Drive Links
+                Upload Documents & Google Docs / Drive Links
               </h2>
               <p className="text-xs text-slate-600 mt-1">
-                Upload local files or add Google Drive links for Standard Operating Procedures (SOPs), Records Disposition Schedule (RDS), or Template Categories.
+                Upload local files or add Google Docs / Drive links for Administrative Issuances (Series 2025 & 2026), SOPs, or Templates. Users can preview Google Docs directly in the portal.
               </p>
             </div>
 
             {/* Mode Switcher */}
             <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-lg w-fit border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setUploadMode('drive')}
+                className={`px-4 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  uploadMode === 'drive'
+                    ? 'bg-[#0284c7] text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <LinkIcon className="w-3.5 h-3.5" />
+                <span>Add Google Docs / Drive Link</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setUploadMode('file')}
@@ -497,19 +537,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span>Upload Local File</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setUploadMode('drive')}
-                className={`px-4 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                  uploadMode === 'drive'
-                    ? 'bg-[#0284c7] text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <LinkIcon className="w-3.5 h-3.5" />
-                <span>Add Google Drive Link</span>
               </button>
             </div>
 
@@ -629,14 +656,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                          Google Drive Link URL *
+                          Google Docs / Google Drive Link URL *
                         </label>
                         <input
                           type="url"
                           value={driveUrl}
                           onChange={(e) => setDriveUrl(e.target.value)}
-                          placeholder="https://drive.google.com/drive/folders/... or https://docs.google.com/..."
-                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500"
+                          placeholder="https://docs.google.com/document/d/... or https://drive.google.com/..."
+                          className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500 font-mono"
                         />
                       </div>
                     </div>

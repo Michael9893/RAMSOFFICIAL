@@ -577,12 +577,7 @@ export function subscribeToSopFiles(callback: (files: SopFile[]) => void): () =>
         const list: SopFile[] = [];
         snapshot.forEach((d) => {
           const item = sanitizeFileForFirestore(d.data() as Partial<SopFile>);
-          // Clean out any previously uploaded or seeded issuance documents from Firestore
-          if (item.sopId === 'issuance-2025' || item.sopId === 'issuance-2026') {
-            deleteDoc(doc(db, 'sopFiles', d.id)).catch(() => {});
-          } else {
-            list.push(item);
-          }
+          list.push(item);
         });
 
         // Ensure RDS resource files exist in Firestore
@@ -810,11 +805,17 @@ export async function deleteUser(userId: string): Promise<void> {
 
 export async function uploadSopFile(file: SopFile): Promise<void> {
   const clean = sanitizeFileForFirestore(file);
-  const payload = cleanFirestorePayload(clean);
 
   // Immediate local update
   const current = getStoredSopFiles();
   saveStoredSopFiles([clean, ...current.filter((f) => f.id !== clean.id)]);
+
+  // Firestore has a strict 1MB document limit.
+  // If fileData is a large base64 (> 750KB), keep full base64 in local storage and store payload safely.
+  const payload = cleanFirestorePayload(clean);
+  if (payload.fileData && typeof payload.fileData === 'string' && payload.fileData.length > 750000) {
+    payload.fileData = 'local_storage_cached';
+  }
 
   // Cloud Firestore persistence
   try {
@@ -837,42 +838,48 @@ export async function deleteSopFile(fileId: string): Promise<void> {
   }
 }
 
-// Convert Google Drive link to preview embed URL
+// Convert Google Drive or Google Docs link to preview embed URL
 export function getGoogleDriveEmbedUrl(url: string): string | null {
   if (!url) return null;
+  const cleanUrl = url.trim();
 
-  // File link: /file/d/{ID}/...
-  const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (fileMatch && fileMatch[1]) {
-    return `https://drive.google.com/file/d/${fileMatch[1]}/preview`;
+  // Already a preview link
+  if (cleanUrl.includes('/preview')) {
+    return cleanUrl;
   }
 
-  // Google Docs: /document/d/{ID}/...
-  const docMatch = url.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
+  // Google Docs: /document/d/{ID}
+  const docMatch = cleanUrl.match(/docs\.google\.com\/document\/(?:u\/\d+\/)?d\/([a-zA-Z0-9_-]+)/);
   if (docMatch && docMatch[1]) {
     return `https://docs.google.com/document/d/${docMatch[1]}/preview`;
   }
 
-  // Google Sheets: /spreadsheets/d/{ID}/...
-  const sheetMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  // Google Spreadsheets: /spreadsheets/d/{ID}
+  const sheetMatch = cleanUrl.match(/docs\.google\.com\/spreadsheets\/(?:u\/\d+\/)?d\/([a-zA-Z0-9_-]+)/);
   if (sheetMatch && sheetMatch[1]) {
     return `https://docs.google.com/spreadsheets/d/${sheetMatch[1]}/preview`;
   }
 
-  // Google Presentation: /presentation/d/{ID}/...
-  const presMatch = url.match(/\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+  // Google Presentation: /presentation/d/{ID}
+  const presMatch = cleanUrl.match(/docs\.google\.com\/presentation\/(?:u\/\d+\/)?d\/([a-zA-Z0-9_-]+)/);
   if (presMatch && presMatch[1]) {
     return `https://docs.google.com/presentation/d/${presMatch[1]}/preview`;
   }
 
+  // Google Drive File: /file/d/{ID}
+  const fileMatch = cleanUrl.match(/drive\.google\.com\/file\/(?:u\/\d+\/)?d\/([a-zA-Z0-9_-]+)/);
+  if (fileMatch && fileMatch[1]) {
+    return `https://drive.google.com/file/d/${fileMatch[1]}/preview`;
+  }
+
   // Google Drive folder: /folders/{ID}
-  const folderMatch = url.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  const folderMatch = cleanUrl.match(/drive\.google\.com\/(?:drive\/)?folders\/([a-zA-Z0-9_-]+)/);
   if (folderMatch && folderMatch[1]) {
     return `https://drive.google.com/embeddedfolderview?id=${folderMatch[1]}#grid`;
   }
 
   // Open with id param: ?id={ID}
-  const idParamMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  const idParamMatch = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (idParamMatch && idParamMatch[1]) {
     return `https://drive.google.com/file/d/${idParamMatch[1]}/preview`;
   }
@@ -907,7 +914,7 @@ export function sanitizeMessengerialRecord(
     id: String(rec.id || `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`),
     category,
     trackingNumber: String(rec.trackingNumber || '').trim(),
-    courier: String(rec.courier || 'LBC Express').trim(),
+    courier: String(rec.courier || 'J&T Express').trim(),
     recipient: String(rec.recipient || '').trim(),
     recipientOffice: String(rec.recipientOffice || '').trim(),
     sender: String(rec.sender || 'AD-RAMS Records Section FO 1').trim(),

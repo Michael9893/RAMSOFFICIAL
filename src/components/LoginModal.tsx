@@ -263,7 +263,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           {/* Bottom: Republic of the Philippines info */}
           <div className="relative z-10 pt-4 mt-4 border-t border-white/15 flex items-center justify-between text-[10px] sm:text-[11px] text-sky-200/70">
             <span>DSWD Regional Government Center, FO 1</span>
-            <span className="font-semibold text-white/80">NAP Compliant</span>
           </div>
         </div>
 

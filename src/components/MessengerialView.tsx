@@ -74,7 +74,8 @@ export const MessengerialView: React.FC<MessengerialViewProps> = ({
   // Form states - completely BLANK by default (no autofills or mock names)
   const [formCategory, setFormCategory] = useState<MessengerialCategory>('CO.PSP');
   const [formTrackingNumber, setFormTrackingNumber] = useState('');
-  const [formCourier, setFormCourier] = useState('LBC Express');
+  const [formCourier, setFormCourier] = useState('J&T Express');
+  const [customCourier, setCustomCourier] = useState('');
   const [formRecipient, setFormRecipient] = useState('');
   const [formRecipientOffice, setFormRecipientOffice] = useState('');
   const [formSender, setFormSender] = useState('');
@@ -116,7 +117,8 @@ export const MessengerialView: React.FC<MessengerialViewProps> = ({
     setEditingRecord(null);
     setFormCategory(defaultCat || (selectedCategory === 'all' ? 'CO.PSP' : selectedCategory));
     setFormTrackingNumber('');
-    setFormCourier('LBC Express');
+    setFormCourier('J&T Express');
+    setCustomCourier('');
     setFormRecipient('');
     setFormRecipientOffice('');
     setFormSender('');
@@ -138,7 +140,14 @@ export const MessengerialView: React.FC<MessengerialViewProps> = ({
     setEditingRecord(rec);
     setFormCategory(rec.category);
     setFormTrackingNumber(rec.trackingNumber);
-    setFormCourier(rec.courier);
+    const standardCouriers = ['J&T Express', 'PhilPost (Registered Mail)', 'PhilPost (Express Mail)'];
+    if (standardCouriers.includes(rec.courier)) {
+      setFormCourier(rec.courier);
+      setCustomCourier('');
+    } else {
+      setFormCourier('Other');
+      setCustomCourier(rec.courier);
+    }
     setFormRecipient(rec.recipient);
     setFormRecipientOffice(rec.recipientOffice || '');
     setFormSender(rec.sender);
@@ -203,14 +212,19 @@ export const MessengerialView: React.FC<MessengerialViewProps> = ({
     setFormLoading(true);
 
     try {
+      const resolvedCourier =
+        formCourier === 'Other'
+          ? (customCourier.trim() || 'Service Provider')
+          : formCourier.trim();
+
       const finalTrackingUrl =
         formTrackingUrl.trim() ||
-        getCarrierTrackingUrl(formCourier, formTrackingNumber.trim());
+        getCarrierTrackingUrl(resolvedCourier, formTrackingNumber.trim());
 
       const payload = {
         category: formCategory,
         trackingNumber: formTrackingNumber.trim(),
-        courier: formCourier.trim(),
+        courier: resolvedCourier,
         recipient: formRecipient.trim(),
         recipientOffice: formRecipientOffice.trim(),
         sender: formSender.trim() || 'AD-RAMS Records Section FO 1',
@@ -1130,15 +1144,24 @@ export const MessengerialView: React.FC<MessengerialViewProps> = ({
                         : 'bg-white border-slate-300 text-slate-900 focus:border-sky-500'
                     }`}
                   >
-                    <option value="LBC Express">LBC Express</option>
                     <option value="J&T Express">J&T Express</option>
                     <option value="PhilPost (Registered Mail)">PhilPost (Registered Mail)</option>
                     <option value="PhilPost (Express Mail)">PhilPost (Express Mail)</option>
-                    <option value="2GO Express">2GO Express</option>
-                    <option value="Air21">Air21</option>
-                    <option value="DHL Express">DHL Express</option>
-                    <option value="DSWD In-House Messenger">DSWD In-House Messenger</option>
+                    <option value="Other">Other / Custom Service Provider</option>
                   </select>
+                  {formCourier === 'Other' && (
+                    <input
+                      type="text"
+                      value={customCourier}
+                      onChange={(e) => setCustomCourier(e.target.value)}
+                      placeholder="Enter courier or service provider name"
+                      className={`mt-2 w-full px-3.5 py-2 text-xs rounded-xl border focus:outline-none transition-colors ${
+                        isDark
+                          ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:border-sky-500'
+                          : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-sky-500'
+                      }`}
+                    />
+                  )}
                 </div>
               </div>
 
