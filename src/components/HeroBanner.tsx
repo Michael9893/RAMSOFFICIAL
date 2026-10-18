@@ -16,10 +16,20 @@ import {
   Layers,
   Package,
   Bell,
+  HeartHandshake,
+  LifeBuoy,
 } from 'lucide-react';
 import { AppNotification } from '../lib/notificationStore.ts';
 
-export type AppTab = 'home' | 'messengerial' | 'resources' | 'issuances-2025' | 'issuances-2026' | 'issuances-all';
+export type AppTab =
+  | 'home'
+  | 'messengerial'
+  | 'resources'
+  | 'issuances-2025'
+  | 'issuances-2026'
+  | 'issuances-all'
+  | 'client-satisfaction'
+  | 'ticketing';
 
 interface HeroBannerProps {
   currentUser: AppUser | null;
@@ -53,12 +63,14 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   const unreadNotifs = notifications.filter((n) => !n.readBy.includes(userEmail)).length;
   const [templatesDropdownOpen, setTemplatesDropdownOpen] = useState(false);
   const [issuancesDropdownOpen, setIssuancesDropdownOpen] = useState(false);
+  const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileTemplatesOpen, setMobileTemplatesOpen] = useState(false);
   const [mobileIssuancesOpen, setMobileIssuancesOpen] = useState(false);
 
   const templatesRef = useRef<HTMLDivElement>(null);
   const issuancesRef = useRef<HTMLDivElement>(null);
+  const servicesRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -68,6 +80,9 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
       }
       if (issuancesRef.current && !issuancesRef.current.contains(event.target as Node)) {
         setIssuancesDropdownOpen(false);
+      }
+      if (servicesRef.current && !servicesRef.current.contains(event.target as Node)) {
+        setServicesDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -256,6 +271,77 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Services & Help Dropdown (Client Satisfaction & Ticketing Support) */}
+            <div className="relative" ref={servicesRef}>
+              <button
+                onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
+                onMouseEnter={() => setServicesDropdownOpen(true)}
+                className={`transition-colors cursor-pointer flex items-center gap-1.5 py-1 ${
+                  activeTab === 'client-satisfaction' || activeTab === 'ticketing'
+                    ? 'text-amber-300 font-bold border-b-2 border-amber-300 pb-0.5'
+                    : 'text-sky-100 hover:text-white'
+                }`}
+              >
+                <span>Services & Help</span>
+                <span className="text-[10px]">{servicesDropdownOpen ? '▲' : '▼'}</span>
+              </button>
+
+              {servicesDropdownOpen && (
+                <div
+                  onMouseLeave={() => setServicesDropdownOpen(false)}
+                  className="absolute right-0 sm:left-0 mt-1 w-64 bg-white border border-slate-200 shadow-2xl rounded-lg py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150 text-slate-800"
+                >
+                  <div className="px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-1">
+                    Assistance & Feedback Forms
+                  </div>
+
+                  {/* Client Satisfaction option */}
+                  <button
+                    onClick={() => {
+                      setServicesDropdownOpen(false);
+                      onSelectTab('client-satisfaction');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className={`w-full text-left px-4 py-2 text-[13px] font-medium transition-colors cursor-pointer flex items-center justify-between ${
+                      activeTab === 'client-satisfaction'
+                        ? 'bg-rose-50 text-rose-900 font-bold'
+                        : 'text-slate-700 hover:bg-rose-50 hover:text-rose-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <HeartHandshake className="w-4 h-4 text-rose-500" />
+                      <span>Client Satisfaction</span>
+                    </div>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-rose-100 text-rose-800">
+                      CSF
+                    </span>
+                  </button>
+
+                  {/* Ticketing Support option */}
+                  <button
+                    onClick={() => {
+                      setServicesDropdownOpen(false);
+                      onSelectTab('ticketing');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className={`w-full text-left px-4 py-2 text-[13px] font-medium transition-colors cursor-pointer flex items-center justify-between ${
+                      activeTab === 'ticketing'
+                        ? 'bg-amber-50 text-amber-900 font-bold'
+                        : 'text-slate-700 hover:bg-amber-50 hover:text-amber-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <LifeBuoy className="w-4 h-4 text-amber-500" />
+                      <span>Ticketing Support</span>
+                    </div>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-amber-100 text-amber-800">
+                      Helpdesk
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Desktop Right side: Notifications, Dark Mode Toggle, Login Status & Admin Side Button */}
@@ -280,20 +366,17 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               )}
             </button>
 
-            {/* Theme Toggle Button */}
+            {/* Theme Toggle Button (Icon only) */}
             <button
               onClick={onToggleTheme}
-              className={`p-2 rounded-lg border transition-colors cursor-pointer flex items-center gap-1.5 ${
+              className={`p-2 rounded-lg border transition-colors cursor-pointer flex items-center justify-center ${
                 isDark
                   ? 'bg-slate-800/80 border-slate-700 text-amber-300 hover:bg-slate-800'
                   : 'bg-[#173273] border-[#2b4c9e] text-amber-200 hover:bg-[#1e4094]'
               }`}
               title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
-              {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-              <span className="text-[11px] font-semibold text-white">
-                {isDark ? 'Light' : 'Dark'}
-              </span>
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
             {currentUser ? (
@@ -451,6 +534,36 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 }`}
               >
                 Resources (RDS)
+              </button>
+
+              <button
+                onClick={() => {
+                  onSelectTab('client-satisfaction');
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full py-2.5 px-3 rounded-lg text-left text-xs font-bold transition-colors flex items-center gap-1.5 ${
+                  activeTab === 'client-satisfaction'
+                    ? 'bg-rose-500 text-white font-black'
+                    : 'bg-[#173273] text-sky-100 hover:bg-[#20408d]'
+                }`}
+              >
+                <HeartHandshake className="w-3.5 h-3.5 text-rose-300" />
+                <span>Client Satisfaction (CSF)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onSelectTab('ticketing');
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full py-2.5 px-3 rounded-lg text-left text-xs font-bold transition-colors flex items-center gap-1.5 ${
+                  activeTab === 'ticketing'
+                    ? 'bg-amber-500 text-slate-950 font-black'
+                    : 'bg-[#173273] text-sky-100 hover:bg-[#20408d]'
+                }`}
+              >
+                <LifeBuoy className="w-3.5 h-3.5 text-amber-300" />
+                <span>Ticketing Support</span>
               </button>
             </div>
 

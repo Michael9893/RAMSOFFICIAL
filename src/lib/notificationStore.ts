@@ -107,10 +107,24 @@ export function sanitizeNotification(data: Partial<AppNotification>): AppNotific
   };
 }
 
+const subscribers: Set<(notifications: AppNotification[]) => void> = new Set();
+
+function notifySubscribers(list: AppNotification[]) {
+  subscribers.forEach((cb) => {
+    try {
+      cb(list);
+    } catch (e) {
+      console.error('Notification subscriber error:', e);
+    }
+  });
+}
+
 /**
  * Subscribes in real-time to notifications from Firebase Firestore
  */
 export function subscribeToNotifications(callback: (notifications: AppNotification[]) => void): () => void {
+  subscribers.add(callback);
+
   // Emit local cache immediately
   callback(getStoredNotifications());
 
@@ -130,7 +144,7 @@ export function subscribeToNotifications(callback: (notifications: AppNotificati
         } catch (e) {
           console.warn('Seeding initial notifications to Firestore failed:', e);
         }
-        callback(INITIAL_NOTIFICATIONS);
+        notifySubscribers(INITIAL_NOTIFICATIONS);
       } else {
         initialized = true;
         const list: AppNotification[] = [];
@@ -156,7 +170,7 @@ export function subscribeToNotifications(callback: (notifications: AppNotificati
         });
 
         saveStoredNotifications(list);
-        callback(list);
+        notifySubscribers(list);
       }
     },
     (error) => {
@@ -165,7 +179,10 @@ export function subscribeToNotifications(callback: (notifications: AppNotificati
     }
   );
 
-  return unsubscribe;
+  return () => {
+    subscribers.delete(callback);
+    unsubscribe();
+  };
 }
 
 /**
@@ -185,6 +202,7 @@ export async function createNotification(
   const current = getStoredNotifications();
   const updated = [newNotif, ...current.filter((n) => n.id !== newNotif.id)];
   saveStoredNotifications(updated);
+  notifySubscribers(updated);
 
   // Firestore sync
   try {
@@ -211,6 +229,7 @@ export async function markNotificationAsRead(notificationId: string, userEmail: 
   const updatedReadBy = [...target.readBy, userEmail];
   const updated = current.map((n) => (n.id === notificationId ? { ...n, readBy: updatedReadBy } : n));
   saveStoredNotifications(updated);
+  notifySubscribers(updated);
 
   try {
     await updateDoc(doc(db, 'notifications', notificationId), {
@@ -218,6 +237,29 @@ export async function markNotificationAsRead(notificationId: string, userEmail: 
     });
   } catch (e) {
     console.error('Firestore markNotificationAsRead error:', e);
+  }
+}
+
+/**
+ * Mark a single notification as unread by a user
+ */
+export async function markNotificationAsUnread(notificationId: string, userEmail: string): Promise<void> {
+  if (!userEmail) return;
+  const current = getStoredNotifications();
+  const target = current.find((n) => n.id === notificationId);
+  if (!target) return;
+
+  const updatedReadBy = target.readBy.filter((e) => e.toLowerCase() !== userEmail.toLowerCase());
+  const updated = current.map((n) => (n.id === notificationId ? { ...n, readBy: updatedReadBy } : n));
+  saveStoredNotifications(updated);
+  notifySubscribers(updated);
+
+  try {
+    await updateDoc(doc(db, 'notifications', notificationId), {
+      readBy: updatedReadBy,
+    });
+  } catch (e) {
+    console.error('Firestore markNotificationAsUnread error:', e);
   }
 }
 
@@ -234,6 +276,7 @@ export async function markAllNotificationsAsRead(userEmail: string): Promise<voi
     return n;
   });
   saveStoredNotifications(updated);
+  notifySubscribers(updated);
 
   // Update in Firestore in background
   try {
@@ -252,7 +295,9 @@ export async function markAllNotificationsAsRead(userEmail: string): Promise<voi
  */
 export async function deleteNotification(notificationId: string): Promise<void> {
   const current = getStoredNotifications();
-  saveStoredNotifications(current.filter((n) => n.id !== notificationId));
+  const updated = current.filter((n) => n.id !== notificationId);
+  saveStoredNotifications(updated);
+  notifySubscribers(updated);
 
   try {
     await deleteDoc(doc(db, 'notifications', notificationId));

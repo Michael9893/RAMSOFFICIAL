@@ -54,7 +54,7 @@ export interface MessengerialRecord {
   id: string;
   category: MessengerialCategory; // CO.PSP, PSP, or POSTAL
   trackingNumber: string;
-  courier: string; // e.g. LBC Express, J&T Express, PhilPost, 2GO
+  courier: string; // e.g. JRS Express, PhilPost, LBC Express, 2GO
   recipient: string; // Addressee / Recipient office or person
   recipientOffice?: string;
   sender: string; // Originating office / section
@@ -98,12 +98,182 @@ export const SOP_CATEGORIES = [
   { id: 'incoming', title: 'Processing of Incoming Documents', type: 'sop' as const },
 ];
 
+export const SYSTEM_CATEGORIES = [
+  { id: 'client-satisfaction', title: 'Client Satisfaction Measurement (CSM/CSF) Form', type: 'system' as const },
+  { id: 'ticketing-support', title: 'Ticketing Support System Service Form', type: 'system' as const },
+];
+
 export const ALL_UPLOADABLE_SECTIONS = [
   ...RESOURCE_CATEGORIES,
   ...ISSUANCE_CATEGORIES,
   ...SOP_CATEGORIES,
   ...TEMPLATE_CATEGORIES,
+  ...SYSTEM_CATEGORIES,
 ];
+
+export interface DswdOdsuCategory {
+  division: string;
+  units: string[];
+}
+
+export const DSWD_FO1_ODSUS: DswdOdsuCategory[] = [
+  {
+    division: 'Office of the Regional Director (ORD)',
+    units: [
+      'ORD - Office of the Regional Director',
+      'ORD - Office of the Assistant Regional Director for Administration (ARDA)',
+      'ORD - Office of the Assistant Regional Director for Operations (ARDO)',
+      'ORD - Regional Information and Communications Technology Management Section (RICTMS)',
+      'ORD - Legal Unit',
+      'ORD - Social Marketing Unit (SMU)',
+      'ORD - Regional Planning Unit / Policy Planning (RPU)',
+      'ORD - Regional Internal Audit Unit (RIAU)',
+    ],
+  },
+  {
+    division: 'Administrative Division (AD)',
+    units: [
+      'AD - Records and Archives Management Section (RAMS)',
+      'AD - General Services Section (GSS)',
+      'AD - Procurement Section (PS)',
+      'AD - Property and Asset Management Section (PAMS)',
+      'AD - Building and Grounds Maintenance Unit',
+      'AD - Transport & Motorpool Unit',
+    ],
+  },
+  {
+    division: 'Financial Management Division (FMD)',
+    units: [
+      'FMD - Accounting Section',
+      'FMD - Budget Section',
+      'FMD - Cash Section',
+    ],
+  },
+  {
+    division: 'Human Resource Management and Development Division (HRMDD)',
+    units: [
+      'HRMDD - Human Resource Planning and Performance Management Section (HRPPMS)',
+      'HRMDD - Personnel Administration Section (PAS)',
+      'HRMDD - Capacity Building Section (CBS)',
+      'HRMDD - Employee Welfare Section (EWS)',
+    ],
+  },
+  {
+    division: 'Promotive Services Division (PSD)',
+    units: [
+      'PSD - Pantawid Pamilyang Pilipino Program (4Ps RPMO)',
+      'PSD - Sustainable Livelihood Program (SLP RPMO)',
+      'PSD - KALAHI-CIDSS Comprehensive and Integrated Delivery of Social Services (KC RPMO)',
+      'PSD - Enhanced Partnership Against Hunger and Poverty (EPAHP)',
+    ],
+  },
+  {
+    division: 'Protective Services Division (PPSD)',
+    units: [
+      'PPSD - Crisis Intervention Section (CIS / AICS) - San Fernando, La Union',
+      'PPSD - Community-Based Services Section (CBSS)',
+      'PPSD - Supplementary Feeding Program (SFP)',
+      'PPSD - Social Pension for Indigent Senior Citizens Unit (SocPen)',
+      'PPSD - Centenarian Program Unit',
+      'PPSD - Recovery and Reintegration Program for Trafficked Persons (RRPTP)',
+      'PPSD - Regional Alternative Child Care Office (RACCO Ilocos)',
+      'PPSD - Minors Travelling Abroad (MTA Unit)',
+    ],
+  },
+  {
+    division: 'Centers and Residential Care Facilities (CRCF - FO1 La Union & Region 1)',
+    units: [
+      'CRCF - Regional Rehabilitation Center for Youth (RRCY) - Bauang, La Union',
+      'CRCF - Home for Girls (HFG) - Agoo, La Union',
+      'CRCF - Haven for Children (HFC) - Dagupan City',
+      'CRCF - Area Vocational Rehabilitation Center I (AVRC I) - Bonuan, Dagupan City',
+      'CRCF - Reception and Study Center for Children (RSCC)',
+    ],
+  },
+  {
+    division: 'Disaster Response Management Division (DRMD)',
+    units: [
+      'DRMD - Disaster Response and Rehabilitation Section (DRRS)',
+      'DRMD - Disaster Response Information and Management Section (DRIMS)',
+      'DRMD - Regional Resource Operations Section (RROS / Regional Warehouse - San Fernando / Biga, La Union)',
+      'DRMD - Quick Response Team (QRT - FO1)',
+    ],
+  },
+  {
+    division: 'Policy and Plans Division (PPD)',
+    units: [
+      'PPD - Policy Development and Planning Section (PDPS)',
+      'PPD - Standards Section (SS)',
+      'PPD - National Household Targeting Section (NHTS-PR / Listahanan)',
+      'PPD - Information and Statistics Unit (ISU)',
+    ],
+  },
+  {
+    division: 'Provincial Operations Offices (POO) & SWAD Offices',
+    units: [
+      'POO - La Union Provincial Operations Office (San Fernando City, La Union)',
+      'SWAD Team - La Union (Social Welfare and Development Office - San Fernando City)',
+      'POO - Ilocos Norte Provincial Operations Office (Laoag City)',
+      'SWAD Team - Ilocos Norte (Laoag City)',
+      'POO - Ilocos Sur Provincial Operations Office (Vigan City)',
+      'SWAD Team - Ilocos Sur (Vigan City)',
+      'POO - Western Pangasinan Provincial Operations Office (Dagupan City)',
+      'POO - Eastern Pangasinan Satellite Office (Rosales / Urdaneta)',
+      'SWAD Team - Pangasinan (Dagupan / Rosales)',
+    ],
+  },
+  {
+    division: 'Special Committees & Focal Desks (FO1 La Union)',
+    units: [
+      'FO1 - Bids and Awards Committee Secretariat (BAC)',
+      'FO1 - Gender and Development (GAD) Focal Unit',
+      'FO1 - Regional Disaster Operations Center (DOC)',
+      'FO1 - Integrity Management Committee (IMC)',
+    ],
+  },
+];
+
+export interface ClientSatisfactionFeedback {
+  id: string;
+  clientName?: string;
+  clientEmail?: string;
+  clientOffice?: string;
+  clientType?: 'Citizen' | 'Government Employee' | 'Business / Organization' | 'Other';
+  serviceAvailed: string;
+  dateAvailed: string;
+  ratings: {
+    responsiveness: number;
+    reliability: number;
+    integrity: number;
+    facilities: number;
+    overall: number;
+  };
+  comments?: string;
+  submittedAt: string;
+}
+
+export type TicketPriority = 'Low' | 'Medium' | 'High' | 'Urgent';
+export type TicketStatus = 'Open' | 'In Progress' | 'Resolved' | 'Closed';
+
+export interface SupportTicket {
+  id: string;
+  ticketNumber: string;
+  title: string;
+  category: string;
+  priority: TicketPriority;
+  status: TicketStatus;
+  requesterName: string;
+  requesterEmail: string;
+  requesterOffice: string;
+  description: string;
+  attachedFormUrl?: string;
+  attachedFormName?: string;
+  isDriveLink?: boolean;
+  resolutionNotes?: string;
+  assignedTo?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const DEFAULT_USERS: AppUser[] = [
   {
@@ -175,6 +345,36 @@ const INITIAL_SOP_FILES: SopFile[] = [
     uploadedAt: '2025-02-12 11:00 AM',
     description: 'Inter-agency routing dispatch voucher for courier services.',
     downloadCount: 22,
+  },
+  {
+    id: 'sop-drive-messengerial',
+    sopId: 'messengerial',
+    sopTitle: 'Request for Messengerial Services',
+    fileName: 'SOP on Messengerial Services & Mail Routing (Google Docs)',
+    fileSize: 'Google Docs',
+    fileType: 'google-drive',
+    fileData: 'https://docs.google.com/document/d/1XyZ_Messengerial_Services_SOP_Guidelines/preview',
+    isDriveLink: true,
+    driveUrl: 'https://docs.google.com/document/d/1XyZ_Messengerial_Services_SOP_Guidelines/preview',
+    uploadedBy: 'admin@dswd.gov.ph',
+    uploadedAt: '2025-02-12 11:15 AM',
+    description: 'Official Standard Operating Procedure on Courier & Postal Messengerial Dispatches (CO.PSP, PSP, POSTAL).',
+    downloadCount: 46,
+  },
+  {
+    id: 'csf-drive-form',
+    sopId: 'client-satisfaction',
+    sopTitle: 'Client Satisfaction Measurement (CSM/CSF) Form',
+    fileName: 'DSWD Citizen/Client Satisfaction Measurement (CSM) Official Survey Form (Google Docs)',
+    fileSize: 'Google Docs',
+    fileType: 'google-drive',
+    fileData: 'https://docs.google.com/document/d/1_DSWD_CSM_Client_Satisfaction_Form/preview',
+    isDriveLink: true,
+    driveUrl: 'https://docs.google.com/document/d/1_DSWD_CSM_Client_Satisfaction_Form/preview',
+    uploadedBy: 'admin@dswd.gov.ph',
+    uploadedAt: '2025-02-14 08:30 AM',
+    description: 'Official DSWD ARTA-compliant Client Satisfaction Measurement (CSM) survey form for AD-RAMS frontline and internal services.',
+    downloadCount: 88,
   },
   {
     id: 'tpl-file-1',
@@ -444,9 +644,12 @@ export function getStoredSopFiles(): SopFile[] {
     const raw = localStorage.getItem(STORAGE_KEY_FILES);
     if (raw) {
       const parsed: SopFile[] = JSON.parse(raw);
-      // Ensure administrative issuances files are removed per user request
+      // Ensure administrative issuances files and mock ticketing forms are removed per user request
       const filtered = parsed.filter(
-        (f) => f.sopId !== 'issuance-2025' && f.sopId !== 'issuance-2026'
+        (f) =>
+          f.sopId !== 'issuance-2025' &&
+          f.sopId !== 'issuance-2026' &&
+          f.id !== 'tkt-drive-form'
       );
       const sanitized = filtered.map((f) => sanitizeFileForFirestore(f));
       let updated = [...sanitized];
@@ -878,6 +1081,12 @@ export function getGoogleDriveEmbedUrl(url: string): string | null {
     return `https://drive.google.com/embeddedfolderview?id=${folderMatch[1]}#grid`;
   }
 
+  // Google Forms: /forms/d/e/{ID}/viewform
+  const formMatch = cleanUrl.match(/docs\.google\.com\/forms\/(?:u\/\d+\/)?d\/(?:e\/)?([a-zA-Z0-9_-]+)/);
+  if (formMatch && formMatch[1]) {
+    return `https://docs.google.com/forms/d/e/${formMatch[1]}/viewform?embedded=true`;
+  }
+
   // Open with id param: ?id={ID}
   const idParamMatch = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (idParamMatch && idParamMatch[1]) {
@@ -914,7 +1123,13 @@ export function sanitizeMessengerialRecord(
     id: String(rec.id || `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`),
     category,
     trackingNumber: String(rec.trackingNumber || '').trim(),
-    courier: String(rec.courier || 'J&T Express').trim(),
+    courier: (() => {
+      const c = String(rec.courier || 'JRS Express').trim();
+      if (c.toLowerCase().includes('j&t') || c.toLowerCase().includes('jt express')) {
+        return 'JRS Express';
+      }
+      return c;
+    })(),
     recipient: String(rec.recipient || '').trim(),
     recipientOffice: String(rec.recipientOffice || '').trim(),
     sender: String(rec.sender || 'AD-RAMS Records Section FO 1').trim(),
@@ -1044,11 +1259,11 @@ export async function deleteMessengerialRecord(id: string): Promise<void> {
 export function getCarrierTrackingUrl(courier: string, trackingNumber: string): string {
   const cleanNum = trackingNumber.trim().replace(/\s+/g, '');
   const lower = courier.toLowerCase();
-  if (lower.includes('lbc')) {
-    return `https://www.lbcexpress.com/track/?tracking_no=${encodeURIComponent(cleanNum)}`;
+  if (lower.includes('jrs')) {
+    return `https://www.jrs-express.com/track/?tracking_no=${encodeURIComponent(cleanNum)}`;
   }
-  if (lower.includes('j&t') || lower.includes('jt')) {
-    return `https://www.jtexpress.ph/trajectoryQuery?bills=${encodeURIComponent(cleanNum)}`;
+  if (lower.includes('lbcexpress') || lower.includes('lbc')) {
+    return `https://www.lbcexpress.com/track/?tracking_no=${encodeURIComponent(cleanNum)}`;
   }
   if (lower.includes('postal') || lower.includes('philpost') || lower.includes('phlpost')) {
     return `https://tracking.phlpost.gov.ph/`;
@@ -1056,5 +1271,258 @@ export function getCarrierTrackingUrl(courier: string, trackingNumber: string): 
   if (lower.includes('2go')) {
     return `https://supplychain.2go.com.ph/tracking/index.asp`;
   }
-  return `https://www.google.com/search?q=${encodeURIComponent(courier + ' tracking ' + cleanNum)}`;
+  return `https://www.jrs-express.com/track/?tracking_no=${encodeURIComponent(cleanNum)}`;
+}
+
+// ==========================================
+// CLIENT SATISFACTION (CSM / CSF) STORE
+// ==========================================
+
+const STORAGE_KEY_FEEDBACKS = 'rams_client_feedbacks_v1';
+
+const INITIAL_FEEDBACKS: ClientSatisfactionFeedback[] = [
+  {
+    id: 'csf-init-1',
+    clientName: 'Juan Dela Cruz',
+    clientEmail: 'jdelacruz@dswd.gov.ph',
+    clientOffice: 'Promotive Services Division',
+    clientType: 'Government Employee',
+    serviceAvailed: 'Request for Messengerial Services',
+    dateAvailed: '2025-02-12',
+    ratings: {
+      responsiveness: 5,
+      reliability: 5,
+      integrity: 5,
+      facilities: 4,
+      overall: 5,
+    },
+    comments: 'Very prompt courier dispatch and helpful staff in tracking the parcels to our field units.',
+    submittedAt: '2025-02-12T14:30:00Z',
+  },
+  {
+    id: 'csf-init-2',
+    clientName: 'Elena Ramos',
+    clientEmail: 'eramos@dswd.gov.ph',
+    clientOffice: 'Disaster Response Management Division',
+    clientType: 'Government Employee',
+    serviceAvailed: 'Request for Copies and Certification of Documents',
+    dateAvailed: '2025-02-10',
+    ratings: {
+      responsiveness: 5,
+      reliability: 4,
+      integrity: 5,
+      facilities: 5,
+      overall: 5,
+    },
+    comments: 'Certification of Special Orders was processed within the day. Great job AD-RAMS!',
+    submittedAt: '2025-02-10T16:15:00Z',
+  },
+];
+
+export function getStoredFeedbacks(): ClientSatisfactionFeedback[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_FEEDBACKS);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.error(e);
+  }
+  return INITIAL_FEEDBACKS;
+}
+
+export function saveStoredFeedbacks(feedbacks: ClientSatisfactionFeedback[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_FEEDBACKS, JSON.stringify(feedbacks));
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+export function subscribeToSatisfactionFeedbacks(
+  callback: (feedbacks: ClientSatisfactionFeedback[]) => void
+): () => void {
+  callback(getStoredFeedbacks());
+
+  try {
+    const colRef = collection(db, 'satisfactionFeedbacks');
+    const unsubscribe = onSnapshot(
+      colRef,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const fresh: ClientSatisfactionFeedback[] = [];
+          snapshot.forEach((docSnap) => {
+            fresh.push(docSnap.data() as ClientSatisfactionFeedback);
+          });
+          fresh.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+          saveStoredFeedbacks(fresh);
+          callback(fresh);
+        } else {
+          callback(getStoredFeedbacks());
+        }
+      },
+      (error) => {
+        console.warn('Firestore satisfactionFeedbacks subscription error:', error);
+        callback(getStoredFeedbacks());
+      }
+    );
+    return unsubscribe;
+  } catch (e) {
+    console.error('subscribeToSatisfactionFeedbacks error:', e);
+    return () => {};
+  }
+}
+
+export async function createSatisfactionFeedback(
+  data: Omit<ClientSatisfactionFeedback, 'id' | 'submittedAt'>
+): Promise<ClientSatisfactionFeedback> {
+  const newFeedback: ClientSatisfactionFeedback = {
+    ...data,
+    id: `csf-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    submittedAt: new Date().toISOString(),
+  };
+
+  const current = getStoredFeedbacks();
+  saveStoredFeedbacks([newFeedback, ...current]);
+
+  try {
+    const payload = cleanFirestorePayload(newFeedback);
+    await setDoc(doc(db, 'satisfactionFeedbacks', newFeedback.id), payload);
+  } catch (e) {
+    console.error('Firestore createSatisfactionFeedback error:', e);
+  }
+
+  return newFeedback;
+}
+
+export async function deleteSatisfactionFeedback(id: string): Promise<void> {
+  const current = getStoredFeedbacks();
+  saveStoredFeedbacks(current.filter((f) => f.id !== id));
+
+  try {
+    await deleteDoc(doc(db, 'satisfactionFeedbacks', id));
+  } catch (e) {
+    console.error('Firestore deleteSatisfactionFeedback error:', e);
+  }
+}
+
+// ==========================================
+// TICKETING SUPPORT SYSTEM STORE
+// ==========================================
+
+const STORAGE_KEY_TICKETS = 'rams_tickets_v2';
+
+const INITIAL_TICKETS: SupportTicket[] = [];
+
+export function getStoredTickets(): SupportTicket[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_TICKETS);
+    if (raw) {
+      const parsed: SupportTicket[] = JSON.parse(raw);
+      // Remove any auto-filled mock tickets from previous sessions
+      const clean = parsed.filter((t) => !t.id.startsWith('tkt-init-'));
+      return clean;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+  return [];
+}
+
+export function saveStoredTickets(tickets: SupportTicket[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_TICKETS, JSON.stringify(tickets));
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+export function subscribeToTickets(callback: (tickets: SupportTicket[]) => void): () => void {
+  callback(getStoredTickets());
+
+  try {
+    const colRef = collection(db, 'tickets');
+    const unsubscribe = onSnapshot(
+      colRef,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const fresh: SupportTicket[] = [];
+          snapshot.forEach((docSnap) => {
+            fresh.push(docSnap.data() as SupportTicket);
+          });
+          fresh.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          saveStoredTickets(fresh);
+          callback(fresh);
+        } else {
+          callback(getStoredTickets());
+        }
+      },
+      (error) => {
+        console.warn('Firestore tickets subscription error:', error);
+        callback(getStoredTickets());
+      }
+    );
+    return unsubscribe;
+  } catch (e) {
+    console.error('subscribeToTickets error:', e);
+    return () => {};
+  }
+}
+
+export async function createSupportTicket(
+  data: Omit<SupportTicket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt'>
+): Promise<SupportTicket> {
+  const current = getStoredTickets();
+  const sequence = String(current.length + 1).padStart(3, '0');
+  const year = new Date().getFullYear();
+  const ticketNumber = `RAMS-TKT-${year}-${sequence}`;
+
+  const newTicket: SupportTicket = {
+    ...data,
+    id: `tkt-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    ticketNumber,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  saveStoredTickets([newTicket, ...current]);
+
+  try {
+    const payload = cleanFirestorePayload(newTicket);
+    await setDoc(doc(db, 'tickets', newTicket.id), payload);
+  } catch (e) {
+    console.error('Firestore createSupportTicket error:', e);
+  }
+
+  return newTicket;
+}
+
+export async function updateSupportTicket(
+  id: string,
+  updates: Partial<SupportTicket>
+): Promise<void> {
+  const current = getStoredTickets();
+  const updated = current.map((t) =>
+    t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t
+  );
+  saveStoredTickets(updated);
+
+  try {
+    const payload = cleanFirestorePayload({
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    });
+    await updateDoc(doc(db, 'tickets', id), payload);
+  } catch (e) {
+    console.error('Firestore updateSupportTicket error:', e);
+  }
+}
+
+export async function deleteSupportTicket(id: string): Promise<void> {
+  const current = getStoredTickets();
+  saveStoredTickets(current.filter((t) => t.id !== id));
+
+  try {
+    await deleteDoc(doc(db, 'tickets', id));
+  } catch (e) {
+    console.error('Firestore deleteSupportTicket error:', e);
+  }
 }

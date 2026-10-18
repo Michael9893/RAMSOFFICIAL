@@ -16,6 +16,12 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read, write: if true;
     }
+    match /tickets/{ticketId} {
+      allow read, write: if true;
+    }
+    match /satisfactionFeedbacks/{feedbackId} {
+      allow read, write: if true;
+    }
   }
 }
 

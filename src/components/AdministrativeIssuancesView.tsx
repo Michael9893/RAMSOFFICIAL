@@ -12,8 +12,11 @@ import {
   FolderOpen,
   X,
   Sparkles,
+  Plus,
+  Lock,
 } from 'lucide-react';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal.tsx';
+import { AdminIssuanceUploadModal } from './AdminIssuanceUploadModal.tsx';
 
 interface AdministrativeIssuancesViewProps {
   currentUser: AppUser | null;
@@ -51,6 +54,9 @@ export const AdministrativeIssuancesView: React.FC<AdministrativeIssuancesViewPr
 
   // Delete modal state
   const [fileToDelete, setFileToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  // Admin upload modal state
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   // Filtered files list based on selected year, search, and type
   const displayedFiles = allIssuances.filter((file) => {
@@ -127,14 +133,41 @@ export const AdministrativeIssuancesView: React.FC<AdministrativeIssuancesViewPr
           </p>
         </div>
 
-        {/* Right Info: Records Badge */}
+        {/* Right Info: Records Badge & Admin Upload Action */}
         <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
-          <div className={`px-3.5 py-2 rounded-lg border text-xs font-semibold flex items-center gap-2 shadow-2xs ${
+          <div className={`px-3.5 py-2 rounded-xl border text-xs font-semibold flex items-center gap-2 shadow-2xs ${
             isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
           }`}>
             <FolderOpen className="w-3.5 h-3.5 text-sky-500" />
-            <span>{displayedFiles.length} Records Available</span>
+            <span>{displayedFiles.length} Records</span>
           </div>
+
+          {isAdmin ? (
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow-sm hover:shadow transition-all cursor-pointer active:scale-95"
+              title="Upload official administrative issuance Google Docs or file"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Upload Issuance (Google Docs)</span>
+              <span className="px-1.5 py-0.2 bg-black/20 text-[10px] uppercase tracking-wider rounded font-semibold text-emerald-100">
+                Admin
+              </span>
+            </button>
+          ) : (
+            <div className={`px-3 py-1.5 rounded-xl border text-xs flex items-center gap-2 ${
+              isDark ? 'bg-slate-900/90 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+            }`}>
+              <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span>Uploads restricted to Admin</span>
+              <button
+                onClick={onOpenLogin}
+                className="underline text-sky-600 dark:text-sky-400 font-semibold hover:text-sky-700 cursor-pointer"
+              >
+                Admin Login
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -594,6 +627,20 @@ export const AdministrativeIssuancesView: React.FC<AdministrativeIssuancesViewPr
           itemTitle={fileToDelete.name}
           onConfirm={handleExecuteDelete}
           onClose={() => setFileToDelete(null)}
+        />
+      )}
+
+      {/* Admin Issuance Upload Modal (Google Docs & Files with live preview & broadcast) */}
+      {isUploadModalOpen && currentUser && (
+        <AdminIssuanceUploadModal
+          currentUser={currentUser}
+          defaultYear={selectedYear === '2025' ? '2025' : '2026'}
+          onClose={() => setIsUploadModalOpen(false)}
+          onSuccess={() => {
+            setIsUploadModalOpen(false);
+            onRefreshData();
+          }}
+          theme={theme}
         />
       )}
     </div>

@@ -24,6 +24,7 @@ interface SopFileViewerModalProps {
   onPreviewDriveLink: (file: SopFile) => void;
   onRefreshData: () => void;
   onClose: () => void;
+  onOpenMessengerialTab?: () => void;
 }
 
 export const SopFileViewerModal: React.FC<SopFileViewerModalProps> = ({
@@ -36,6 +37,7 @@ export const SopFileViewerModal: React.FC<SopFileViewerModalProps> = ({
   onPreviewDriveLink,
   onRefreshData,
   onClose,
+  onOpenMessengerialTab,
 }) => {
   const [fileToDelete, setFileToDelete] = useState<{ id: string; name: string } | null>(null);
 
@@ -132,6 +134,26 @@ export const SopFileViewerModal: React.FC<SopFileViewerModalProps> = ({
               </span>
             )}
           </div>
+
+          {/* Quick link to Messengerial tracking portal when viewing Messengerial SOP */}
+          {sopId === 'messengerial' && onOpenMessengerialTab && (
+            <div className="px-5 py-2.5 bg-gradient-to-r from-sky-50 to-indigo-50 border-b border-sky-100 flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-sky-900 flex items-center gap-1.5">
+                <span>📦</span>
+                <span>Access Live Courier & Postal Tracking (CO.PSP / PSP / POSTAL)</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenMessengerialTab();
+                }}
+                className="px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-lg shadow-2xs transition-colors cursor-pointer"
+              >
+                Go to Tracker →
+              </button>
+            </div>
+          )}
 
           {/* Files List */}
           <div className="p-5 overflow-y-auto space-y-3 flex-1 text-xs text-slate-700 bg-white">

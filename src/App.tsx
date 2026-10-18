@@ -22,6 +22,12 @@ import {
   subscribeToUsers,
   subscribeToSopFiles,
   subscribeToMessengerialRecords,
+  SupportTicket,
+  ClientSatisfactionFeedback,
+  getStoredTickets,
+  getStoredFeedbacks,
+  subscribeToTickets,
+  subscribeToSatisfactionFeedbacks,
 } from './lib/authStore.ts';
 import { AdminPanel } from './components/AdminPanel.tsx';
 import { SopFileViewerModal } from './components/SopFileViewerModal.tsx';
@@ -30,6 +36,8 @@ import { LoginModal } from './components/LoginModal.tsx';
 import { ResourcesView } from './components/ResourcesView.tsx';
 import { AdministrativeIssuancesView } from './components/AdministrativeIssuancesView.tsx';
 import { MessengerialView } from './components/MessengerialView.tsx';
+import { ClientSatisfactionView } from './components/ClientSatisfactionView.tsx';
+import { TicketingSupportView } from './components/TicketingSupportView.tsx';
 import {
   subscribeToNotifications,
   AppNotification,
@@ -67,6 +75,12 @@ export default function App() {
   const [users, setUsers] = useState<AppUser[]>(getStoredUsers());
   const [sopFiles, setSopFiles] = useState<SopFile[]>(getStoredSopFiles());
   const [messengerialRecords, setMessengerialRecords] = useState<MessengerialRecord[]>(getStoredMessengerialRecords());
+  const [tickets, setTickets] = useState<SupportTicket[]>(getStoredTickets());
+  const [feedbacks, setFeedbacks] = useState<ClientSatisfactionFeedback[]>(getStoredFeedbacks());
+
+  // Toggle Bar controls: Announcements visibility and Alert Audio
+  const [isAnnouncementVisible, setIsAnnouncementVisible] = useState(true);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
 
   // Track if user has entered the portal (either by signing in or continuing as guest)
   const [hasEnteredPortal, setHasEnteredPortal] = useState<boolean>(() => {
@@ -132,11 +146,23 @@ export default function App() {
       setNotifications(freshNotifs);
     });
 
+    // 5. Subscribe to Support Tickets
+    const unsubTickets = subscribeToTickets((freshTickets) => {
+      setTickets(freshTickets);
+    });
+
+    // 6. Subscribe to Client Satisfaction Feedback
+    const unsubFeedbacks = subscribeToSatisfactionFeedbacks((freshFeedbacks) => {
+      setFeedbacks(freshFeedbacks);
+    });
+
     return () => {
       unsubUsers();
       unsubFiles();
       unsubMessengerial();
       unsubNotifications();
+      unsubTickets();
+      unsubFeedbacks();
     };
   }, []);
 
@@ -144,6 +170,8 @@ export default function App() {
     setUsers(getStoredUsers());
     setSopFiles(getStoredSopFiles());
     setMessengerialRecords(getStoredMessengerialRecords());
+    setTickets(getStoredTickets());
+    setFeedbacks(getStoredFeedbacks());
     const cur = getCurrentUser();
     if (cur) setLocalCurrentUser(cur);
   };
@@ -238,7 +266,6 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         notifications={notifications}
-        onOpenNotifications={() => setIsNotificationsModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -292,18 +319,10 @@ export default function App() {
               <div className="pt-4 pb-4">
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-x-3 sm:gap-x-4 gap-y-6 sm:gap-y-7 items-start justify-items-center">
                   {sopItems.map((item) => {
-                    const count =
-                      item.id === 'messengerial'
-                        ? messengerialRecords.length
-                        : sopFiles.filter((f) => f.sopId === item.id).length;
+                    const count = sopFiles.filter((f) => f.sopId === item.id).length;
 
                     const handleItemClick = () => {
-                      if (item.id === 'messengerial') {
-                        setActiveTab('messengerial');
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      } else {
-                        setActiveViewerSop(item);
-                      }
+                      setActiveViewerSop(item);
                     };
 
                     return (
@@ -353,10 +372,12 @@ export default function App() {
             </section>
           </>
         ) : activeTab === 'messengerial' ? (
-          /* MESSENGERIAL TAB: CO.PSP, PSP, AND POSTAL TRACKER */
+          /* MESSENGERIAL TAB: CO.PSP, PSP, AND POSTAL TRACKER + SOP REPOSITORY */
           <MessengerialView
             currentUser={currentUser}
             records={messengerialRecords}
+            sopFiles={sopFiles}
+            onPreviewDriveLink={(file) => setPreviewDriveFile(file)}
             onRefreshData={handleRefreshData}
             onOpenLogin={() => setIsLoginModalOpen(true)}
             theme={theme}
@@ -366,6 +387,28 @@ export default function App() {
           <ResourcesView
             currentUser={currentUser}
             files={sopFiles}
+            onPreviewDriveLink={(file) => setPreviewDriveFile(file)}
+            onRefreshData={handleRefreshData}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
+            theme={theme}
+          />
+        ) : activeTab === 'client-satisfaction' ? (
+          /* CLIENT SATISFACTION (CSM / CSF) TAB */
+          <ClientSatisfactionView
+            currentUser={currentUser}
+            files={sopFiles}
+            feedbacks={feedbacks}
+            onPreviewDriveLink={(file) => setPreviewDriveFile(file)}
+            onRefreshData={handleRefreshData}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
+            theme={theme}
+          />
+        ) : activeTab === 'ticketing' ? (
+          /* TICKETING SUPPORT SYSTEM TAB */
+          <TicketingSupportView
+            currentUser={currentUser}
+            files={sopFiles}
+            tickets={tickets}
             onPreviewDriveLink={(file) => setPreviewDriveFile(file)}
             onRefreshData={handleRefreshData}
             onOpenLogin={() => setIsLoginModalOpen(true)}
@@ -456,6 +499,11 @@ export default function App() {
               setIsLoginModalOpen(true);
             }
           }}
+          onOpenMessengerialTab={() => {
+            setActiveViewerSop(null);
+            setActiveTab('messengerial');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
           onPreviewDriveLink={(file) => setPreviewDriveFile(file)}
           onRefreshData={handleRefreshData}
           onClose={() => setActiveViewerSop(null)}
@@ -499,7 +547,9 @@ export default function App() {
             sectionId === 'issuances-2025' ||
             sectionId === 'issuances-2026' ||
             sectionId === 'messengerial' ||
-            sectionId === 'resources'
+            sectionId === 'resources' ||
+            sectionId === 'client-satisfaction' ||
+            sectionId === 'ticketing'
           ) {
             setActiveTab(sectionId as AppTab);
             window.scrollTo({ top: 0, behavior: 'smooth' });

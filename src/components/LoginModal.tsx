@@ -5,6 +5,7 @@ import {
   getStoredUsers,
   registerUser,
   UserRole,
+  DSWD_FO1_ODSUS,
 } from '../lib/authStore.ts';
 import {
   X,
@@ -18,6 +19,7 @@ import {
   EyeOff,
   User,
   Building,
+  ChevronDown,
   Clock,
   UserPlus,
   LogIn,
@@ -62,6 +64,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regDepartment, setRegDepartment] = useState('');
+  const [customOdsu, setCustomOdsu] = useState('');
   const [regRequestedRole, setRegRequestedRole] = useState<UserRole>('user');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
@@ -189,6 +192,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
+    if (!regDepartment || !regDepartment.trim()) {
+      setRegError('Please select your DSWD FO-1 ODSU (Office, Division, Section, or Unit).');
+      return;
+    }
+
+    const finalDepartment =
+      regDepartment === 'Other'
+        ? (customOdsu.trim() || 'DSWD Field Office 1 (Specialized Unit)')
+        : regDepartment.trim();
+
     setRegLoading(true);
 
     try {
@@ -196,7 +209,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         name: regName.trim(),
         email: regEmail.trim().toLowerCase(),
         password: regPassword.trim(),
-        department: regDepartment.trim() || 'DSWD Field Office 1',
+        department: finalDepartment,
         requestedRole: regRequestedRole,
       });
 
@@ -553,25 +566,59 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Division / Section (Optional) */}
+                    {/* DSWD FO-1 La Union ODSU Dropdown */}
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Division / Section (Optional)
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          DSWD FO-1 ODSU (Office, Division, Section, Unit) *
+                        </label>
+                        <span className="text-[10px] text-sky-600 dark:text-sky-400 font-medium">
+                          La Union Regional Portal
+                        </span>
+                      </div>
                       <div className="relative">
-                        <Building className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                        <input
-                          type="text"
+                        <Building className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                        <select
                           value={regDepartment}
                           onChange={(e) => setRegDepartment(e.target.value)}
-                          placeholder="Division or section (optional)"
-                          className={`w-full pl-9 pr-3.5 py-2 text-xs rounded-lg border focus:outline-none transition-colors ${
+                          className={`w-full pl-9 pr-8 py-2 text-xs rounded-lg border focus:outline-none transition-colors cursor-pointer appearance-none ${
                             isDark
-                              ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:border-sky-500'
-                              : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-sky-500'
+                              ? 'bg-slate-800 border-slate-700 text-white focus:border-sky-500'
+                              : 'bg-white border-slate-300 text-slate-900 focus:border-sky-500'
                           }`}
-                        />
+                        >
+                          <option value="">Select your DSWD FO-1 ODSU...</option>
+                          {DSWD_FO1_ODSUS.map((cat) => (
+                            <optgroup key={cat.division} label={cat.division}>
+                              {cat.units.map((unit) => (
+                                <option key={unit} value={unit}>
+                                  {unit}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                          <optgroup label="Other / Specialized Unit">
+                            <option value="Other">Other / Unlisted DSWD FO-1 Office or Center</option>
+                          </optgroup>
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
                       </div>
+
+                      {regDepartment === 'Other' && (
+                        <div className="mt-2 animate-in fade-in duration-150">
+                          <input
+                            type="text"
+                            value={customOdsu}
+                            onChange={(e) => setCustomOdsu(e.target.value)}
+                            placeholder="Enter your specific Unit, Project, or Center name"
+                            className={`w-full px-3 py-2 text-xs rounded-lg border focus:outline-none transition-colors ${
+                              isDark
+                                ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500 focus:border-sky-500'
+                                : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-sky-500'
+                            }`}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* Password & Confirm */}
