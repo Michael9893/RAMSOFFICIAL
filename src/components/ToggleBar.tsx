@@ -184,7 +184,7 @@ export const ToggleBar: React.FC<ToggleBarProps> = ({
             <button
               type="button"
               onClick={onOpenNotifications}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-2xs ${
+              className={`p-2 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-2xs relative flex items-center justify-center ${
                 unreadCount > 0
                   ? 'bg-rose-500 hover:bg-rose-600 text-white border-rose-600 shadow-sm animate-pulse'
                   : isDark
@@ -193,14 +193,11 @@ export const ToggleBar: React.FC<ToggleBarProps> = ({
               }`}
               title={`View Bulletins & Announcements (${unreadCount} unread)`}
             >
-              <Bell className={`w-3.5 h-3.5 ${unreadCount > 0 ? 'text-white' : 'text-amber-500'}`} />
-              <span className="hidden sm:inline">Bulletins</span>
-              {unreadCount > 0 ? (
-                <span className="px-1.5 py-0.2 bg-white text-rose-600 text-[10px] font-black rounded-full">
+              <Bell className={`w-4 h-4 ${unreadCount > 0 ? 'text-white' : 'text-amber-500'}`} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-white text-rose-600 text-[10px] font-black rounded-full ring-2 ring-rose-500">
                   {unreadCount}
                 </span>
-              ) : (
-                <span className="text-[10px] text-slate-400 hidden sm:inline">({notifications.length})</span>
               )}
             </button>
 

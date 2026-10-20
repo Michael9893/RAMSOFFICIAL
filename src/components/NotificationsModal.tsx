@@ -4,6 +4,7 @@ import {
   NotificationType,
   NotificationPriority,
   markNotificationAsRead,
+  markNotificationAsUnread,
   markAllNotificationsAsRead,
   deleteNotification,
   createNotification,
@@ -23,6 +24,9 @@ import {
   ChevronRight,
   ExternalLink,
   Pin,
+  Check,
+  Mail,
+  MailOpen,
 } from 'lucide-react';
 
 interface NotificationsModalProps {
@@ -46,7 +50,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   const isAdmin = currentUser?.role === 'admin';
   const userEmail = currentUser?.email || 'guest@dswd.gov.ph';
 
-  const [filterType, setFilterType] = useState<'all' | 'announcement' | 'upload' | 'reminder'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'unread' | 'announcement' | 'upload' | 'reminder'>('all');
   const [isComposing, setIsComposing] = useState(false);
 
   // Compose State
@@ -64,6 +68,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   // Filter list
   const filteredNotifications = notifications.filter((notif) => {
     if (filterType === 'all') return true;
+    if (filterType === 'unread') return !notif.readBy.includes(userEmail);
     return notif.type === filterType;
   });
 
@@ -92,6 +97,26 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
     setComposeError('');
 
     try {
+      const getTargetTitle = (sec: string) => {
+        switch (sec) {
+          case 'messengerial':
+            return 'Messengerial Services Tracker';
+          case 'resources':
+            return 'Resources & Records Disposition Schedule';
+          case 'issuances-2026':
+            return 'Administrative Issuances 2026';
+          case 'issuances-2025':
+            return 'Administrative Issuances 2025';
+          case 'client-satisfaction':
+            return 'Client Satisfaction Measurement (CSM / CSF)';
+          case 'ticketing':
+            return 'Ticketing Support Helpdesk';
+          case 'home':
+          default:
+            return 'General Bulletin';
+        }
+      };
+
       await createNotification({
         type: newType,
         title: newTitle.trim(),
@@ -99,6 +124,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
         priority: newPriority,
         createdBy: userEmail,
         targetSection: newTargetSection,
+        targetTitle: getTargetTitle(newTargetSection),
         pinned: newPinned,
       });
 
@@ -193,6 +219,24 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
               All ({notifications.length})
             </button>
             <button
+              onClick={() => setFilterType('unread')}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                filterType === 'unread'
+                  ? 'bg-sky-600 text-white'
+                  : isDark
+                  ? 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${unreadCount > 0 ? 'bg-amber-400 animate-pulse' : 'bg-slate-400'}`} />
+              <span>Unread</span>
+              {unreadCount > 0 && (
+                <span className="px-1 py-0.2 rounded-full text-[9px] font-black bg-rose-500 text-white">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => setFilterType('announcement')}
               className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors cursor-pointer shrink-0 flex items-center gap-1 ${
                 filterType === 'announcement'
@@ -246,43 +290,41 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
               </button>
             )}
 
-            {isAdmin && (
-              <button
-                onClick={() => setIsComposing(!isComposing)}
-                className={`p-1.5 rounded-md font-semibold text-[11px] flex items-center gap-1 transition-colors cursor-pointer ${
-                  isComposing
-                    ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
-                    : 'bg-[#0284c7] hover:bg-[#0369a1] text-white shadow-xs'
-                }`}
-                title={isComposing ? 'Close composer' : 'Post announcement or reminder as Admin'}
-              >
-                {isComposing ? (
-                  <>
-                    <X className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Close</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Post Notice</span>
-                  </>
-                )}
-              </button>
-            )}
+            <button
+              onClick={() => setIsComposing(!isComposing)}
+              className={`p-1.5 rounded-md font-semibold text-[11px] flex items-center gap-1 transition-colors cursor-pointer ${
+                isComposing
+                  ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
+                  : 'bg-[#0284c7] hover:bg-[#0369a1] text-white shadow-xs'
+              }`}
+              title={isComposing ? 'Close composer' : 'Post bulletin or reminder'}
+            >
+              {isComposing ? (
+                <>
+                  <X className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Close</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Post Notice</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
-        {/* Admin Compose Form (Collapsible) */}
-        {isAdmin && isComposing && (
+        {/* Compose Bulletin Form (Collapsible) */}
+        {isComposing && (
           <form onSubmit={handlePostNotification} className={`p-4 border-b space-y-3 animate-in slide-in-from-top-2 duration-150 ${
             isDark ? 'bg-slate-850/90 border-slate-700' : 'bg-sky-50/70 border-sky-200'
           }`}>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-sky-900 dark:text-sky-200 flex items-center gap-1.5 uppercase tracking-wide">
                 <Megaphone className="w-3.5 h-3.5 text-amber-500" />
-                <span>Admin Announcement & Reminder Creator</span>
+                <span>Broadcast Portal Bulletin & Advisory</span>
               </span>
-              <span className="text-[10px] font-mono text-slate-500">Broadcasting to all users</span>
+              <span className="text-[10px] font-mono text-slate-500">Live feed broadcast</span>
             </div>
 
             {composeError && (
@@ -291,7 +333,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Bulletin Category
@@ -327,6 +369,43 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
               </div>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                  Target Portal Section
+                </label>
+                <select
+                  value={newTargetSection}
+                  onChange={(e) => setNewTargetSection(e.target.value)}
+                  className={`w-full px-2.5 py-1.5 rounded-lg border text-xs focus:outline-none cursor-pointer ${
+                    isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                  }`}
+                >
+                  <option value="home">General / Home Feed</option>
+                  <option value="issuances-2026">Administrative Issuances 2026</option>
+                  <option value="issuances-2025">Administrative Issuances 2025</option>
+                  <option value="messengerial">Messengerial Services Tracker</option>
+                  <option value="resources">Resources (Records Disposition Schedule)</option>
+                  <option value="client-satisfaction">Client Satisfaction (CSM / CSF)</option>
+                  <option value="ticketing">Ticketing Support Helpdesk</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                  Posted By (Sender)
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={currentUser ? `${currentUser.name} (${currentUser.role})` : userEmail}
+                  className={`w-full px-2.5 py-1.5 rounded-lg border text-xs opacity-80 ${
+                    isDark ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-300 text-slate-600'
+                  }`}
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Notice Title *
@@ -335,7 +414,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 type="text"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="e.g. Mandatory submission of Series 2026 Records"
+                placeholder="Enter notice title or bulletin headline"
                 className={`w-full px-2.5 py-1.5 rounded-lg border text-xs focus:outline-none ${
                   isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
                 }`}
@@ -481,16 +560,48 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                     )}
                   </div>
 
-                  {/* Right Column: Unread Indicator & Delete for Admin */}
-                  <div className="absolute right-3.5 top-3.5 flex flex-col items-end gap-2">
-                    {isUnread && (
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7] ring-4 ring-sky-200 dark:ring-sky-950" />
-                    )}
+                  {/* Right Column: Unread Indicator & Actions */}
+                  <div className="absolute right-3.5 top-3.5 flex flex-col items-end gap-1.5">
+                    <div className="flex items-center gap-1">
+                      {/* Quick Toggle Read / Unread */}
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (isUnread) {
+                            await markNotificationAsRead(notif.id, userEmail);
+                          } else {
+                            await markNotificationAsUnread(notif.id, userEmail);
+                          }
+                        }}
+                        className={`p-1 rounded text-[10px] flex items-center gap-0.5 transition-all cursor-pointer ${
+                          isUnread
+                            ? 'text-sky-600 hover:text-sky-800 bg-sky-100/70 hover:bg-sky-200/80 dark:bg-sky-950/70 dark:text-sky-300'
+                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                        title={isUnread ? 'Mark as read' : 'Mark as unread'}
+                      >
+                        {isUnread ? (
+                          <>
+                            <Check className="w-3 h-3 text-sky-600 dark:text-sky-400" />
+                            <span className="hidden sm:inline font-semibold">Mark read</span>
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="w-3 h-3 text-slate-400" />
+                            <span className="hidden sm:inline">Mark unread</span>
+                          </>
+                        )}
+                      </button>
 
-                    {isAdmin && (
+                      {isUnread && (
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7] ring-4 ring-sky-200 dark:ring-sky-950 ml-1" />
+                      )}
+                    </div>
+
+                    {(isAdmin || notif.createdBy === userEmail) && (
                       <button
                         onClick={(e) => handleDelete(e, notif.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 rounded transition-opacity cursor-pointer"
+                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 rounded transition-opacity cursor-pointer mt-0.5"
                         title="Delete notification"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

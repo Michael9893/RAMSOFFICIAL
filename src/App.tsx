@@ -40,9 +40,11 @@ import { ClientSatisfactionView } from './components/ClientSatisfactionView.tsx'
 import { TicketingSupportView } from './components/TicketingSupportView.tsx';
 import {
   subscribeToNotifications,
+  getStoredNotifications,
   AppNotification,
 } from './lib/notificationStore.ts';
 import { NotificationsModal } from './components/NotificationsModal.tsx';
+import { AnnouncementBanner } from './components/AnnouncementBanner.tsx';
 
 interface SopItem {
   id: string;
@@ -91,7 +93,7 @@ export default function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [activeViewerSop, setActiveViewerSop] = useState<SopItem | null>(null);
   const [previewDriveFile, setPreviewDriveFile] = useState<SopFile | null>(null);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>(getStoredNotifications);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
 
   // Apply theme class to document body & root
@@ -172,6 +174,7 @@ export default function App() {
     setMessengerialRecords(getStoredMessengerialRecords());
     setTickets(getStoredTickets());
     setFeedbacks(getStoredFeedbacks());
+    setNotifications(getStoredNotifications());
     const cur = getCurrentUser();
     if (cur) setLocalCurrentUser(cur);
   };
@@ -266,6 +269,42 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         notifications={notifications}
+        onOpenNotifications={() => setIsNotificationsModalOpen(true)}
+      />
+
+      {/* Real-time Announcements & Urgent Bulletins Banner */}
+      <AnnouncementBanner
+        notifications={notifications}
+        onOpenNotifications={() => setIsNotificationsModalOpen(true)}
+        onNavigateToSection={(sectionId, fileId) => {
+          if (
+            sectionId === 'home' ||
+            sectionId === 'issuances-2025' ||
+            sectionId === 'issuances-2026' ||
+            sectionId === 'messengerial' ||
+            sectionId === 'resources' ||
+            sectionId === 'client-satisfaction' ||
+            sectionId === 'ticketing'
+          ) {
+            setActiveTab(sectionId as AppTab);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+          if (fileId) {
+            const foundFile = sopFiles.find((f) => f.id === fileId);
+            if (foundFile) {
+              if (foundFile.isDriveLink) {
+                setPreviewDriveFile(foundFile);
+              } else {
+                setActiveViewerSop({
+                  id: foundFile.sopId,
+                  title: foundFile.sopTitle,
+                  icon: null,
+                });
+              }
+            }
+          }
+        }}
+        theme={theme}
       />
 
       {/* Main Content Area */}
@@ -544,6 +583,7 @@ export default function App() {
         currentUser={currentUser}
         onNavigateToSection={(sectionId, fileId) => {
           if (
+            sectionId === 'home' ||
             sectionId === 'issuances-2025' ||
             sectionId === 'issuances-2026' ||
             sectionId === 'messengerial' ||

@@ -13,30 +13,22 @@ import {
 } from '../lib/authStore.ts';
 import {
   LifeBuoy,
-  Plus,
   Search,
-  Filter,
   Eye,
   ExternalLink,
-  Download,
   Upload,
   CheckCircle2,
   Clock,
-  AlertTriangle,
   FileText,
-  User,
-  Building2,
-  Mail,
-  Send,
   Trash2,
   Lock,
   Edit2,
   Check,
   X,
-  Sparkles,
   Ticket as TicketIcon,
   ChevronRight,
-  HelpCircle,
+  HeartHandshake,
+  Globe,
 } from 'lucide-react';
 import { AdminFormUploadModal } from './AdminFormUploadModal.tsx';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal.tsx';
@@ -49,6 +41,7 @@ interface TicketingSupportViewProps {
   onPreviewDriveLink: (file: SopFile) => void;
   onRefreshData: () => void;
   onOpenLogin: () => void;
+  onNavigateToTab?: (tab: 'client-satisfaction' | 'ticketing' | 'rmds') => void;
   theme?: 'light' | 'dark';
 }
 
@@ -59,13 +52,14 @@ export const TicketingSupportView: React.FC<TicketingSupportViewProps> = ({
   onPreviewDriveLink,
   onRefreshData,
   onOpenLogin,
+  onNavigateToTab,
   theme = 'light',
 }) => {
   const isDark = theme === 'dark';
   const isAdmin = currentUser?.role === 'admin';
 
-  // Sub-tab: 'tickets' (List & Management) | 'preview' (Official Form preview) | 'create' (Submit Ticket)
-  const [activeSubTab, setActiveSubTab] = useState<'tickets' | 'preview' | 'create'>('tickets');
+  // Sub-tab: 'preview' (Official Google Form preview) | 'tickets' (Tickets Tracker & Management)
+  const [activeSubTab, setActiveSubTab] = useState<'preview' | 'tickets'>('preview');
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -87,75 +81,6 @@ export const TicketingSupportView: React.FC<TicketingSupportViewProps> = ({
   const tktFiles = files.filter((f) => f.sopId === 'ticketing-support');
   const primaryDoc = tktFiles[0] || null;
   const previewEmbedUrl = primaryDoc ? getGoogleDriveEmbedUrl(primaryDoc.driveUrl || primaryDoc.fileData) : null;
-
-  // New Ticket Form State - completely clean, no fake names or files
-  const [formName, setFormName] = useState(currentUser?.name || '');
-  const [formEmail, setFormEmail] = useState(currentUser?.email || '');
-  const [formOffice, setFormOffice] = useState(currentUser?.department || '');
-  const [formCategory, setFormCategory] = useState('Request for Technical Assistance on Records Management');
-  const [formPriority, setFormPriority] = useState<TicketPriority>('Medium');
-  const [formTitle, setFormTitle] = useState('');
-  const [formDescription, setFormDescription] = useState('');
-  const [formDriveUrl, setFormDriveUrl] = useState('');
-  const [formError, setFormError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccessMsg, setSubmitSuccessMsg] = useState('');
-
-  // Handle Ticket Submit
-  const handleCreateTicket = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError('');
-
-    if (!formName.trim() || !formEmail.trim() || !formOffice.trim() || !formTitle.trim() || !formDescription.trim()) {
-      setFormError('Please fill out all required fields (Name, Email, Division, Subject, and Description).');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const created = await createSupportTicket({
-        title: formTitle.trim(),
-        category: formCategory,
-        priority: formPriority,
-        status: 'Open',
-        requesterName: formName.trim(),
-        requesterEmail: formEmail.trim(),
-        requesterOffice: formOffice.trim(),
-        description: formDescription.trim(),
-        attachedFormUrl: formDriveUrl.trim() || undefined,
-        attachedFormName: formDriveUrl.trim() ? 'Google Form / Document Attachment' : undefined,
-        isDriveLink: !!formDriveUrl.trim(),
-      });
-
-      setSubmitSuccessMsg(`Ticket created successfully! Tracking ID: ${created.ticketNumber}`);
-      setFormTitle('');
-      setFormDescription('');
-      setFormDriveUrl('');
-
-      // Broadcast notification
-      createNotification({
-        type: 'announcement',
-        title: `New Support Ticket: ${created.ticketNumber}`,
-        message: `${created.requesterName} from ${created.requesterOffice} submitted: "${created.title}" (${created.category}).`,
-        priority: created.priority === 'Urgent' ? 'urgent' : 'normal',
-        createdBy: created.requesterEmail,
-        targetSection: 'ticketing',
-        targetTitle: 'Ticketing Support System',
-      }).catch(() => {});
-
-      onRefreshData();
-
-      setTimeout(() => {
-        setSubmitSuccessMsg('');
-        setActiveSubTab('tickets');
-      }, 2200);
-    } catch (err) {
-      console.error(err);
-      setFormError('Failed to submit ticket. Please check your network and try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleDeleteDoc = async () => {
     if (!docToDelete) return;
@@ -257,6 +182,66 @@ export const TicketingSupportView: React.FC<TicketingSupportViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Assistance & Feedback Forms Sub-Navigation */}
+      <div className={`p-2.5 rounded-2xl border flex items-center justify-between gap-2 flex-wrap ${
+        isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'
+      }`}>
+        <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-2">
+            Assistance & Forms:
+          </span>
+          <button
+            type="button"
+            onClick={() => onNavigateToTab?.('client-satisfaction')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              isDark
+                ? 'text-slate-300 hover:bg-slate-800'
+                : 'text-slate-700 hover:bg-white hover:shadow-2xs'
+            }`}
+          >
+            <HeartHandshake className="w-3.5 h-3.5 text-rose-500" />
+            <span>Client Satisfaction (CSF)</span>
+          </button>
+
+          <button
+            type="button"
+            className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-default flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs"
+          >
+            <LifeBuoy className="w-3.5 h-3.5 text-slate-950" />
+            <span>Ticketing Support</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigateToTab?.('rmds')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              isDark
+                ? 'text-slate-300 hover:bg-slate-800'
+                : 'text-slate-700 hover:bg-white hover:shadow-2xs'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5 text-blue-500" />
+            <span>RMDS Portal</span>
+          </button>
+        </div>
+
+        {isAdmin ? (
+          <button
+            type="button"
+            onClick={() => setIsUploadModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors cursor-pointer"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>{primaryDoc ? 'Replace Google Form (Admin)' : 'Upload Google Form (Admin)'}</span>
+          </button>
+        ) : (
+          <span className="text-xs text-slate-400 flex items-center gap-1.5 font-medium px-2">
+            <Lock className="w-3 h-3 text-amber-500" />
+            <span>Official Form Uploaded by Admin</span>
+          </span>
+        )}
+      </div>
+
       {/* 1. Header Hero Banner */}
       <div className={`p-6 sm:p-8 rounded-2xl border shadow-sm transition-colors ${
         isDark ? 'bg-slate-900 border-slate-800' : 'bg-gradient-to-r from-blue-50 via-white to-sky-50 border-sky-100'
@@ -279,7 +264,7 @@ export const TicketingSupportView: React.FC<TicketingSupportViewProps> = ({
             <p className={`text-xs sm:text-sm max-w-3xl leading-relaxed ${
               isDark ? 'text-slate-300' : 'text-slate-600'
             }`}>
-              Submit technical assistance requests, track document retrieval and disposal tickets, and preview the official DSWD Records Management Service Request Form in desktop or mobile view.
+              The administrator uploads the official Google Forms for technical assistance and service requests here. Users can preview and submit requests through the official Google Form below.
             </p>
           </div>
 
@@ -320,6 +305,21 @@ export const TicketingSupportView: React.FC<TicketingSupportViewProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
+              onClick={() => setActiveSubTab('preview')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeSubTab === 'preview'
+                  ? 'bg-sky-600 text-white shadow-xs'
+                  : isDark
+                  ? 'bg-slate-800 text-slate-300 hover:bg-slate-750'
+                  : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>Official Google Form & Preview</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveSubTab('tickets')}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeSubTab === 'tickets'
@@ -331,36 +331,6 @@ export const TicketingSupportView: React.FC<TicketingSupportViewProps> = ({
             >
               <TicketIcon className="w-3.5 h-3.5" />
               <span>Tickets Tracker ({tickets.length})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveSubTab('preview')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeSubTab === 'preview'
-                  ? 'bg-sky-600 text-white shadow-xs'
-                  : isDark
-                  ? 'bg-slate-800 text-slate-300 hover:bg-slate-750'
-                  : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
-              }`}
-            >
-              <Eye className="w-3.5 h-3.5" />
-              <span>Service Request Form & Preview</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveSubTab('create')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeSubTab === 'create'
-                  ? 'bg-sky-600 text-white shadow-xs'
-                  : isDark
-                  ? 'bg-slate-800 text-slate-300 hover:bg-slate-750'
-                  : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
-              }`}
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Submit Support Ticket</span>
             </button>
           </div>
 
@@ -409,6 +379,16 @@ export const TicketingSupportView: React.FC<TicketingSupportViewProps> = ({
             <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
               {primaryDoc ? (
                 <>
+                  <a
+                    href={primaryDoc.driveUrl || primaryDoc.fileData}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors"
+                  >
+                    <span>Open Official Google Form</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+
                   <button
                     type="button"
                     onClick={() => onPreviewDriveLink(primaryDoc)}
@@ -417,16 +397,6 @@ export const TicketingSupportView: React.FC<TicketingSupportViewProps> = ({
                     <Eye className="w-3.5 h-3.5" />
                     <span>Fullscreen Preview</span>
                   </button>
-
-                  <a
-                    href={primaryDoc.driveUrl || primaryDoc.fileData}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    title="Open in new window"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
 
                   {isAdmin && (
                     <>
@@ -517,200 +487,6 @@ export const TicketingSupportView: React.FC<TicketingSupportViewProps> = ({
               )}
             </div>
           </div>
-        </div>
-      ) : activeSubTab === 'create' ? (
-        /* CREATE TICKET SUB-TAB */
-        <div className={`p-6 sm:p-8 rounded-2xl border shadow-sm ${
-          isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-        }`}>
-          {submitSuccessMsg ? (
-            <div className="py-12 text-center space-y-3">
-              <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto animate-bounce" />
-              <h3 className="text-xl font-bold">Ticket Submitted!</h3>
-              <p className={`text-xs sm:text-sm max-w-md mx-auto ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                {submitSuccessMsg}
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleCreateTicket} className="space-y-6">
-              <div className="border-b pb-4 border-slate-200 dark:border-slate-800">
-                <h2 className="text-lg font-bold">Create Technical Assistance / Service Ticket</h2>
-                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Fill in the details below. Our records section officers will review and address your request.
-                </p>
-              </div>
-
-              {formError && (
-                <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 shrink-0" />
-                  <span>{formError}</span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold mb-1">
-                    Requester Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    placeholder="e.g. Maria Santos"
-                    className={`w-full px-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
-                      isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1">
-                    Email Address <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={formEmail}
-                    onChange={(e) => setFormEmail(e.target.value)}
-                    placeholder="e.g. msantos@dswd.gov.ph"
-                    className={`w-full px-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
-                      isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300'
-                    }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1">
-                    Division / Section / Unit <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formOffice}
-                    onChange={(e) => setFormOffice(e.target.value)}
-                    placeholder="e.g. Finance / HRMDD / Pantawid Pamilya"
-                    className={`w-full px-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
-                      isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold mb-1">Service Category</label>
-                  <select
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value)}
-                    className={`w-full px-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
-                      isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300'
-                    }`}
-                  >
-                    <option value="Request for Technical Assistance on Records Management">
-                      Technical Assistance on Records Management
-                    </option>
-                    <option value="Request for Diposal of Valueless Records">
-                      Disposal of Valueless Records (NAP Form 1)
-                    </option>
-                    <option value="Request for Archival of Vital/Permanent Records">
-                      Archival of Vital / Permanent Records
-                    </option>
-                    <option value="Request for Messengerial Services">
-                      Messengerial & Courier Tracking Inquiry
-                    </option>
-                    <option value="Request for Copies and Certification of Documents">
-                      Copies & Document Certification
-                    </option>
-                    <option value="Administrative Issuances Verification">
-                      Administrative Issuances Verification
-                    </option>
-                    <option value="Portal Access & Account Support">
-                      Portal Access / Technical Bug Report
-                    </option>
-                    <option value="General Inquiry">General Records Inquiry</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1">Priority Level</label>
-                  <select
-                    value={formPriority}
-                    onChange={(e) => setFormPriority(e.target.value as TicketPriority)}
-                    className={`w-full px-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
-                      isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300'
-                    }`}
-                  >
-                    <option value="Low">Low - Routine Request</option>
-                    <option value="Medium">Medium - Standard Operational</option>
-                    <option value="High">High - Priority Document Deadline</option>
-                    <option value="Urgent">Urgent - Immediate Compliance / Audit</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1">
-                  Ticket Subject / Title <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  placeholder="e.g. Assistance in Archival Inventory of 2023 Payroll Slips"
-                  className={`w-full px-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
-                    isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1">
-                  Detailed Description & Requirements <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Specify details, volume of records, series year, urgency, or specific questions..."
-                  className={`w-full px-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
-                    isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1">
-                  Google Docs or Drive Link (Optional Attachment)
-                </label>
-                <input
-                  type="url"
-                  value={formDriveUrl}
-                  onChange={(e) => setFormDriveUrl(e.target.value)}
-                  placeholder="https://docs.google.com/document/d/... or drive.google.com/..."
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-mono border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
-                    isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300'
-                  }`}
-                />
-                <span className="text-[10px] text-slate-400 block mt-1">
-                  Attach your filled Service Request Slip or supporting document link for preview.
-                </span>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-6 py-2.5 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white shadow-md transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
-                >
-                  <Send className="w-4 h-4" />
-                  <span>{isSubmitting ? 'Creating Ticket...' : 'Submit Support Ticket'}</span>
-                </button>
-              </div>
-            </form>
-          )}
         </div>
       ) : (
         /* TICKETS TRACKER SUB-TAB */

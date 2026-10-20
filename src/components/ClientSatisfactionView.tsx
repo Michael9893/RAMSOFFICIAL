@@ -417,7 +417,7 @@ export const ClientSatisfactionView: React.FC<ClientSatisfactionViewProps> = ({
                     type="text"
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
-                    placeholder="e.g. Juan Dela Cruz"
+                    placeholder="Enter your full name"
                     className={`w-full px-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
                       isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300'
                     }`}
@@ -430,7 +430,7 @@ export const ClientSatisfactionView: React.FC<ClientSatisfactionViewProps> = ({
                     type="email"
                     value={clientEmail}
                     onChange={(e) => setClientEmail(e.target.value)}
-                    placeholder="e.g. client@dswd.gov.ph"
+                    placeholder="Enter official email address"
                     className={`w-full px-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
                       isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300'
                     }`}
@@ -443,7 +443,7 @@ export const ClientSatisfactionView: React.FC<ClientSatisfactionViewProps> = ({
                     type="text"
                     value={clientOffice}
                     onChange={(e) => setClientOffice(e.target.value)}
-                    placeholder="e.g. Administrative Division / Promotive Services"
+                    placeholder="Enter office, division, or agency"
                     className={`w-full px-3 py-2 rounded-xl text-xs border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
                       isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300'
                     }`}
@@ -565,72 +565,6 @@ export const ClientSatisfactionView: React.FC<ClientSatisfactionViewProps> = ({
               <span className="text-xs font-semibold text-slate-400 block mb-1">ARTA Compliance</span>
               <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">100%</span>
               <span className="text-[11px] text-slate-400 block mt-1">Standard Citizen&apos;s Charter</span>
-            </div>
-          </div>
-
-          {/* Feedback List */}
-          <div className={`rounded-2xl border overflow-hidden ${
-            isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
-          }`}>
-            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <h3 className="font-bold text-sm">Recent Feedback Submissions</h3>
-              <span className="text-xs text-slate-400 font-semibold">{feedbacks.length} entries</span>
-            </div>
-
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {feedbacks.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 text-xs">
-                  No feedback entries recorded yet.
-                </div>
-              ) : (
-                feedbacks.map((fb) => (
-                  <div key={fb.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-xs text-slate-900 dark:text-white">
-                          {fb.clientName || 'Anonymous'}
-                        </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                          {fb.clientOffice || 'Internal'}
-                        </span>
-                        <span className="text-[11px] text-slate-400">
-                          • {new Date(fb.submittedAt).toLocaleDateString()}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-lg border border-amber-200 dark:border-amber-800">
-                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                          <span className="text-xs font-black text-amber-700 dark:text-amber-400">
-                            {fb.ratings?.overall || 5}/5
-                          </span>
-                        </div>
-
-                        {isAdmin && (
-                          <button
-                            type="button"
-                            onClick={() => setFeedbackToDelete(fb.id)}
-                            className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-                            title="Delete Feedback (Admin only)"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="text-xs font-semibold text-sky-700 dark:text-sky-400 mb-1">
-                      Service Availed: {fb.serviceAvailed}
-                    </div>
-
-                    {fb.comments && (
-                      <p className="text-xs italic text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
-                        &ldquo;{fb.comments}&rdquo;
-                      </p>
-                    )}
-                  </div>
-                ))
-              )}
             </div>
           </div>
         </div>

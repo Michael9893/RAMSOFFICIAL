@@ -101,6 +101,7 @@ export const SOP_CATEGORIES = [
 export const SYSTEM_CATEGORIES = [
   { id: 'client-satisfaction', title: 'Client Satisfaction Measurement (CSM/CSF) Form', type: 'system' as const },
   { id: 'ticketing-support', title: 'Ticketing Support System Service Form', type: 'system' as const },
+  { id: 'rmds', title: 'Records Management & Disposal System (RMDS) Portal', type: 'system' as const },
 ];
 
 export const ALL_UPLOADABLE_SECTIONS = [
@@ -1279,50 +1280,23 @@ export function getCarrierTrackingUrl(courier: string, trackingNumber: string): 
 // ==========================================
 
 const STORAGE_KEY_FEEDBACKS = 'rams_client_feedbacks_v1';
-
-const INITIAL_FEEDBACKS: ClientSatisfactionFeedback[] = [
-  {
-    id: 'csf-init-1',
-    clientName: 'Juan Dela Cruz',
-    clientEmail: 'jdelacruz@dswd.gov.ph',
-    clientOffice: 'Promotive Services Division',
-    clientType: 'Government Employee',
-    serviceAvailed: 'Request for Messengerial Services',
-    dateAvailed: '2025-02-12',
-    ratings: {
-      responsiveness: 5,
-      reliability: 5,
-      integrity: 5,
-      facilities: 4,
-      overall: 5,
-    },
-    comments: 'Very prompt courier dispatch and helpful staff in tracking the parcels to our field units.',
-    submittedAt: '2025-02-12T14:30:00Z',
-  },
-  {
-    id: 'csf-init-2',
-    clientName: 'Elena Ramos',
-    clientEmail: 'eramos@dswd.gov.ph',
-    clientOffice: 'Disaster Response Management Division',
-    clientType: 'Government Employee',
-    serviceAvailed: 'Request for Copies and Certification of Documents',
-    dateAvailed: '2025-02-10',
-    ratings: {
-      responsiveness: 5,
-      reliability: 4,
-      integrity: 5,
-      facilities: 5,
-      overall: 5,
-    },
-    comments: 'Certification of Special Orders was processed within the day. Great job AD-RAMS!',
-    submittedAt: '2025-02-10T16:15:00Z',
-  },
-];
+const INITIAL_FEEDBACKS: ClientSatisfactionFeedback[] = [];
 
 export function getStoredFeedbacks(): ClientSatisfactionFeedback[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_FEEDBACKS);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(
+          (item: ClientSatisfactionFeedback) =>
+            item.id !== 'csf-init-1' &&
+            item.id !== 'csf-init-2' &&
+            item.clientName !== 'Juan Dela Cruz' &&
+            item.clientName !== 'Elena Ramos'
+        );
+      }
+    }
   } catch (e) {
     console.error(e);
   }

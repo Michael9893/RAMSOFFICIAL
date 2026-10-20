@@ -339,6 +339,29 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                       Helpdesk
                     </span>
                   </button>
+
+                  {/* Notifications & Bulletins option */}
+                  <button
+                    onClick={() => {
+                      setServicesDropdownOpen(false);
+                      onOpenNotifications?.();
+                    }}
+                    className="w-full text-left px-4 py-2 text-[13px] font-medium transition-colors cursor-pointer flex items-center justify-between text-slate-700 hover:bg-amber-50 hover:text-amber-900 border-t border-slate-100"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-amber-500" />
+                      <span>Notifications & Bulletins</span>
+                    </div>
+                    {unreadNotifs > 0 ? (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-rose-100 text-rose-800">
+                        {unreadNotifs} New
+                      </span>
+                    ) : (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-slate-100 text-slate-600">
+                        Feed
+                      </span>
+                    )}
+                  </button>
                 </div>
               )}
             </div>
@@ -346,12 +369,12 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
 
           {/* Desktop Right side: Notifications, Dark Mode Toggle, Login Status & Admin Side Button */}
           <div className="hidden lg:flex items-center gap-2.5 text-xs">
-            {/* Notification Bell with Badge */}
+            {/* Notification Bell with Badge (Icon only) */}
             <button
               onClick={onOpenNotifications}
               className={`relative p-2 rounded-lg border transition-all cursor-pointer flex items-center justify-center ${
                 unreadNotifs > 0
-                  ? 'bg-amber-400/25 border-amber-300 text-amber-200 hover:bg-amber-400/35'
+                  ? 'bg-amber-400/25 border-amber-300 text-amber-200 hover:bg-amber-400/35 ring-1 ring-amber-400/40 shadow-xs'
                   : isDark
                   ? 'bg-slate-800/80 border-slate-700 text-sky-200 hover:bg-slate-800'
                   : 'bg-[#173273] border-[#2b4c9e] text-sky-200 hover:bg-[#1e4094]'
@@ -564,6 +587,28 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               >
                 <LifeBuoy className="w-3.5 h-3.5 text-amber-300" />
                 <span>Ticketing Support</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenNotifications?.();
+                }}
+                className="w-full py-2.5 px-3 rounded-lg text-left text-xs font-bold transition-colors flex items-center justify-between bg-[#173273] text-sky-100 hover:bg-[#20408d]"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Bell className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Notifications & Bulletins</span>
+                </div>
+                {unreadNotifs > 0 ? (
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white animate-pulse">
+                    {unreadNotifs} New
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-sky-300 font-normal">
+                    {notifications.length}
+                  </span>
+                )}
               </button>
             </div>
 

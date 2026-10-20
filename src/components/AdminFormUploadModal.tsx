@@ -69,11 +69,11 @@ export const AdminFormUploadModal: React.FC<AdminFormUploadModalProps> = ({
 
     if (uploadMode === 'docs-link') {
       if (!title.trim()) {
-        setError('Please enter a descriptive document title.');
+        setError('Please enter a descriptive document or portal title.');
         return;
       }
       if (!googleDocsUrl.trim()) {
-        setError('Please provide a Google Docs or Google Drive link.');
+        setError('Please provide a valid website link, Google Forms, or Google Drive URL.');
         return;
       }
 
@@ -82,10 +82,13 @@ export const AdminFormUploadModal: React.FC<AdminFormUploadModalProps> = ({
       try {
         const isGoogleDoc = googleDocsUrl.includes('docs.google.com/document');
         const isGoogleForm = googleDocsUrl.includes('docs.google.com/forms');
+        const isWeb = googleDocsUrl.startsWith('http://') || googleDocsUrl.startsWith('https://');
         const fileTypeLabel = isGoogleDoc
           ? 'Google Docs'
           : isGoogleForm
           ? 'Google Form'
+          : isWeb
+          ? 'Website Link'
           : 'Google Drive';
 
         const newFile: SopFile = {
@@ -304,7 +307,11 @@ export const AdminFormUploadModal: React.FC<AdminFormUploadModalProps> = ({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Official Technical Assistance & Records Service Request Form (Google Forms)"
+              placeholder={
+                sectionId === 'rmds'
+                  ? 'e.g. Official Records Management & Disposal System (RMDS) Portal'
+                  : 'e.g. Official Technical Assistance & Records Service Request Form (Google Forms)'
+              }
               className={`w-full px-3 py-2.5 rounded-xl border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
                 isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300'
               }`}
@@ -315,14 +322,19 @@ export const AdminFormUploadModal: React.FC<AdminFormUploadModalProps> = ({
             <div className="space-y-3">
               <div>
                 <label className="block font-bold mb-1">
-                  Google Forms or Google Docs Link <span className="text-rose-500">*</span>
+                  {sectionId === 'rmds' ? 'RMDS Website Link / Portal URL' : 'Google Forms or Google Docs Link'}{' '}
+                  <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <input
                     type="url"
                     value={googleDocsUrl}
                     onChange={(e) => setGoogleDocsUrl(e.target.value)}
-                    placeholder="https://docs.google.com/forms/d/e/... or docs.google.com/document/d/..."
+                    placeholder={
+                      sectionId === 'rmds'
+                        ? 'https://rmds.dswd.gov.ph or official RMDS website URL'
+                        : 'https://docs.google.com/forms/d/e/... or docs.google.com/document/d/...'
+                    }
                     className={`w-full pl-9 pr-3 py-2.5 rounded-xl border focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono text-[11px] ${
                       isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-300'
                     }`}
@@ -330,7 +342,9 @@ export const AdminFormUploadModal: React.FC<AdminFormUploadModalProps> = ({
                   <LinkIcon className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                 </div>
                 <span className="text-[10px] text-slate-400 block mt-1">
-                  Make sure file permission is set to &ldquo;Anyone with link can view&rdquo; in Google Drive.
+                  {sectionId === 'rmds'
+                    ? 'Enter the official web address for the RMDS portal. Users can open this link directly.'
+                    : 'Make sure file permission is set to "Anyone with link can view" in Google Drive.'}
                 </span>
               </div>
 

@@ -33,19 +33,6 @@ const STORAGE_KEY_NOTIFICATIONS = 'rams_notifications_v1';
 
 export const INITIAL_NOTIFICATIONS: AppNotification[] = [
   {
-    id: 'notif-2',
-    type: 'reminder',
-    title: 'Reminder: Messengerial Services Cutoff Time',
-    message: 'All inter-agency delivery slips (CO.PSP, PSP, and POSTAL) must be submitted to the Records and Archives Management Section before 3:00 PM for same-day dispatch.',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(), // 18 hours ago
-    createdBy: 'admin@dswd.gov.ph',
-    priority: 'urgent',
-    targetSection: 'messengerial',
-    targetTitle: 'Messengerial Services Tracker',
-    readBy: [],
-    pinned: true,
-  },
-  {
     id: 'notif-3',
     type: 'upload',
     title: 'Updated Records Disposition Schedule (RDS) Published',
@@ -65,13 +52,16 @@ export function getStoredNotifications(): AppNotification[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.filter(
+        const filtered = parsed.filter(
           (item: AppNotification) =>
             item.id !== 'notif-1' &&
+            item.id !== 'notif-2' &&
+            !item.title.toLowerCase().includes('messengerial services cutoff time') &&
             !item.title.toLowerCase().includes('digitized administrative issuances portal live') &&
             !item.title.toLowerCase().includes('databank of issuances') &&
             !item.message.toLowerCase().includes('databank of issuances')
         );
+        if (filtered.length > 0) return filtered;
       }
     }
   } catch (e) {
@@ -152,6 +142,8 @@ export function subscribeToNotifications(callback: (notifications: AppNotificati
           const item = sanitizeNotification(d.data() as Partial<AppNotification>);
           if (
             item.id === 'notif-1' ||
+            item.id === 'notif-2' ||
+            item.title.toLowerCase().includes('messengerial services cutoff time') ||
             item.title.toLowerCase().includes('digitized administrative issuances portal live') ||
             item.title.toLowerCase().includes('databank of issuances') ||
             item.message.toLowerCase().includes('databank of issuances')
